@@ -35,10 +35,16 @@ interface MockState {
   ranks: Record<RankMode, { tier: TierName; best: number }>
 }
 
+/**
+ * 게임 화면이 나오기 전까지 콜렉터함/상점을 확인할 수 있도록 몇 개를 미리 쥐여준다.
+ * ⚠️ mock 전용. 실제 Supabase에서는 신규 유저의 보유 인형이 0이다.
+ */
+const STARTER_DOLLS: Record<number, number> = { 1: 2, 4: 1, 101: 1, 201: 1 }
+
 const initialState = (): MockState => ({
   signedIn: false,
   profile: { id: 'mock-user-0001', nickname: '테스터', gold: 10000 },
-  owned: {},
+  owned: { ...STARTER_DOLLS },
   sessions: {},
   ranks: { small: { tier: 'bronze', best: 0 }, medium: { tier: 'bronze', best: 0 } },
 })

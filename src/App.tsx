@@ -5,6 +5,7 @@ import { RequireAuth } from '@/components/RequireAuth'
 import { Toaster } from '@/components/ui/Toaster'
 import { Login } from '@/pages/Login'
 import { Lobby } from '@/pages/Lobby'
+import { Collection } from '@/pages/Collection'
 import { Placeholder } from '@/pages/Placeholder'
 
 /**
@@ -35,14 +36,7 @@ export default function App() {
           path="/collection"
           element={
             <RequireAuth>
-              <Placeholder
-                title="콜렉터함"
-                due="08.05"
-                tasks={[
-                  'F2-5 인형 45종 그리드 + 미획득 마스킹 처리',
-                  'F2-6 카테고리 필터(ALL/소형/중형/대형) + 수집률 n/45',
-                ]}
-              />
+              <Collection />
             </RequireAuth>
           }
         />
