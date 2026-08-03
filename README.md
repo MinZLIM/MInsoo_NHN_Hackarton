@@ -2,6 +2,8 @@
 
 Vite와 GitHub Pages를 이용해 배포하고, Supabase를 백엔드로 활용하는 웹 기반 인형뽑기 게임 프로젝트입니다.
 
+> 📋 작업 순서 및 FE/BE 분담은 **[TASKS.md](./TASKS.md)** 를 참고하세요.
+
 ---
 
 ## 📌 1. 프로젝트 개요 및 사용자 시나리오 (User Scenario)
