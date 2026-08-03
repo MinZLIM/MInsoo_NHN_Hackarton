@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { Canvas } from '@react-three/fiber'
 import { Button } from '@/components/ui/Button'
+import { PrizeBox } from '@/game/three/PrizeBox'
+import { MOCK_DOLLS } from '@/mocks/dolls'
+import { dollEmoji } from '@/lib/assets'
 import {
   LARGE_START_SEC,
   LARGE_TARGET_SEC,
@@ -14,7 +18,12 @@ interface Props {
 
 type Result = { stopped: number; success: boolean }
 
-const RESULT_HOLD_MS = 1800
+const RESULT_HOLD_MS = 2600
+
+/** 상자에서 나올 대형 인형. 실제 지급 인형은 서버가 정하므로 연출용이다. */
+const PRIZE_EMOJI = dollEmoji(
+  MOCK_DOLLS.find((d) => d.size === 'large')?.image_path ?? 'dolls/large_01.png',
+)
 
 /**
  * 대형 인형뽑기 (F2-7).
@@ -99,7 +108,10 @@ export function TimingStage({ onEnd }: Props) {
         </div>
 
         <div className="timing__box" aria-hidden>
-          {result ? (result.success ? '🎁' : '📦') : '📦'}
+          <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 1.6, 4.2], fov: 42 }}>
+            <color attach="background" args={['#1a1730']} />
+            <PrizeBox result={result ? result.success : null} prizeEmoji={PRIZE_EMOJI} />
+          </Canvas>
         </div>
 
         {result ? (

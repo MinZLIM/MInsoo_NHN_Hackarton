@@ -1,0 +1,274 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { Physics, type RapierRigidBody } from '@react-three/rapier'
+import { Group } from 'three'
+import { Cabinet } from './Cabinet'
+import { Doll3D } from './Doll3D'
+import { Claw3D } from './Claw3D'
+import {
+  CLAW,
+  CLAW_BOUNDS,
+  DOLL,
+  FALL_THRESHOLD,
+  HALF_D,
+  HOLE_CENTER_X,
+  HOLE,
+} from './layout'
+
+export type ClawPhase = 'aim' | 'descend' | 'grab' | 'ascend' | 'carry' | 'release'
+export type ClawControl = 'manual' | 'swing'
+
+export interface ClawSceneHandle {
+  move: (x: -1 | 0 | 1, z: -1 | 0 | 1) => void
+  drop: () => void
+}
+
+interface Props {
+  emojis: string[]
+  control: ClawControl
+  grabSuccessRate: number
+  onCatch: (total: number) => void
+  onPhaseChange: (phase: ClawPhase) => void
+  /** 조작 핸들을 바깥(HUD 버튼)으로 넘긴다 */
+  onReady: (handle: ClawSceneHandle) => void
+}
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
+
+/**
+ * 3D 인형뽑기 씬. 2D판과 동일한 상태 머신을 3차원으로 옮겼다.
+ * aim(x·z 조준) → descend → grab → ascend → carry(투입구로) → release → aim
+ */
+export function ClawScene(props: Props) {
+  return (
+    <Physics gravity={[0, -9.81, 0]}>
+      <SceneContent {...props} />
+    </Physics>
+  )
+}
+
+function SceneContent({
+  emojis,
+  control,
+  grabSuccessRate,
+  onCatch,
+  onPhaseChange,
+  onReady,
+}: Props) {
+  const clawRef = useRef<Group>(null)
+  const dollRefs = useRef<(RapierRigidBody | null)[]>([])
+
+  const [open, setOpen] = useState(true)
+
+  // 렌더를 유발하지 않도록 진행 상태는 전부 ref에 둔다. 화면 갱신은 phase 변화 시에만.
+  const phase = useRef<ClawPhase>('aim')
+  const pos = useRef({ x: 0, y: CLAW.topY, z: 0 })
+  const input = useRef({ x: 0 as -1 | 0 | 1, z: 0 as -1 | 0 | 1 })
+  const swingDir = useRef<1 | -1>(1)
+  const heldIndex = useRef<number | null>(null)
+  const caught = useRef(0)
+  const collected = useRef(new Set<number>())
+
+  const dolls = useMemo(
+    () =>
+      Array.from({ length: DOLL.count }, (_, i) => {
+        // 턱 오른쪽 영역에 2단으로 쌓는다. 떨어지면서 자연스럽게 무더기가 된다.
+        const cols = 4
+        const perLayer = cols * 2
+        const layer = Math.floor(i / perLayer)
+        const idx = i % perLayer
+        const col = idx % cols
+        const row = Math.floor(idx / cols)
+        return {
+          emoji: emojis[i % emojis.length] ?? '🧸',
+          position: [
+            HOLE.edgeX + 0.62 + col * 0.66 + (row % 2) * 0.2 + layer * 0.12,
+            DOLL.radius + 0.1 + layer * 0.62,
+            -HALF_D + 0.85 + row * 0.75,
+          ] as [number, number, number],
+        }
+      }),
+    [emojis],
+  )
+
+  const setPhase = (next: ClawPhase) => {
+    phase.current = next
+    onPhaseChange(next)
+    setOpen(next === 'aim' || next === 'descend')
+  }
+
+  useEffect(() => {
+    onReady({
+      move: (x, z) => {
+        if (phase.current === 'aim') input.current = { x, z }
+      },
+      drop: () => {
+        if (phase.current !== 'aim') return
+        input.current = { x: 0, z: 0 }
+        setPhase('descend')
+      },
+    })
+    // onReady는 부모에서 고정된 함수를 넘긴다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /** 집게 끝에서 grabRadius 안에 있는 가장 가까운 인형 */
+  const nearestDoll = (): number | null => {
+    let best: number | null = null
+    let bestDist = CLAW.grabRadius
+
+    dollRefs.current.forEach((body, i) => {
+      if (!body || collected.current.has(i)) return
+      const t = body.translation()
+      const dist = Math.hypot(
+        t.x - pos.current.x,
+        t.y - (pos.current.y - 0.28),
+        t.z - pos.current.z,
+      )
+      if (dist < bestDist) {
+        bestDist = dist
+        best = i
+      }
+    })
+    return best
+  }
+
+  useFrame((_, rawDelta) => {
+    // 탭 전환 등으로 프레임이 크게 튀면 물리가 깨지므로 상한을 둔다
+    const delta = Math.min(rawDelta, 1 / 30)
+    const p = pos.current
+
+    switch (phase.current) {
+      case 'aim': {
+        if (control === 'swing') {
+          const next = p.x + swingDir.current * CLAW.speedXZ * 1.35 * delta
+          if (next <= CLAW_BOUNDS.minX || next >= CLAW_BOUNDS.maxX) {
+            swingDir.current = swingDir.current === 1 ? -1 : 1
+          }
+          p.x = clamp(next, CLAW_BOUNDS.minX, CLAW_BOUNDS.maxX)
+        } else {
+          p.x = clamp(
+            p.x + input.current.x * CLAW.speedXZ * delta,
+            CLAW_BOUNDS.minX,
+            CLAW_BOUNDS.maxX,
+          )
+        }
+        p.z = clamp(
+          p.z + input.current.z * CLAW.speedXZ * delta,
+          CLAW_BOUNDS.minZ,
+          CLAW_BOUNDS.maxZ,
+        )
+        break
+      }
+
+      case 'descend': {
+        p.y -= CLAW.speedY * delta
+        const target = nearestDoll()
+        const reached =
+          target !== null &&
+          (dollRefs.current[target]?.translation().y ?? 0) >= p.y - 0.34
+        if (p.y <= CLAW.bottomY || reached) setPhase('grab')
+        break
+      }
+
+      case 'grab': {
+        const target = nearestDoll()
+        if (target !== null && Math.random() < grabSuccessRate) {
+          heldIndex.current = target
+          // 잡은 인형은 물리 대신 집게를 따라오게 한다
+          dollRefs.current[target]?.setBodyType(2, true)
+        }
+        setPhase('ascend')
+        break
+      }
+
+      case 'ascend': {
+        p.y += CLAW.speedY * delta
+        if (p.y >= CLAW.topY) {
+          p.y = CLAW.topY
+          setPhase(heldIndex.current !== null ? 'carry' : 'aim')
+        }
+        break
+      }
+
+      case 'carry': {
+        const dx = HOLE_CENTER_X - p.x
+        const dz = 0 - p.z
+        const dist = Math.hypot(dx, dz)
+        if (dist <= CLAW.carrySpeed * delta) {
+          p.x = HOLE_CENTER_X
+          p.z = 0
+          setPhase('release')
+        } else {
+          p.x += (dx / dist) * CLAW.carrySpeed * delta
+          p.z += (dz / dist) * CLAW.carrySpeed * delta
+        }
+        break
+      }
+
+      case 'release': {
+        const idx = heldIndex.current
+        if (idx !== null) {
+          const body = dollRefs.current[idx]
+          // 동적 물체로 되돌리면 그대로 투입구 아래로 떨어진다
+          body?.setBodyType(0, true)
+          body?.setLinvel({ x: 0, y: 0, z: 0 }, true)
+          heldIndex.current = null
+        }
+        p.x = CLAW_BOUNDS.minX
+        setPhase('aim')
+        break
+      }
+    }
+
+    // 잡고 있는 인형을 집게에 붙여 옮긴다
+    const held = heldIndex.current
+    if (held !== null) {
+      dollRefs.current[held]?.setNextKinematicTranslation({
+        x: p.x,
+        y: p.y - 0.42,
+        z: p.z,
+      })
+    }
+
+    if (clawRef.current) clawRef.current.position.set(p.x, p.y, p.z)
+
+    // 투입구로 빠진 인형을 획득 처리
+    dollRefs.current.forEach((body, i) => {
+      if (!body || collected.current.has(i)) return
+      if (body.translation().y > FALL_THRESHOLD) return
+      collected.current.add(i)
+      caught.current += 1
+      onCatch(caught.current)
+    })
+  })
+
+  return (
+    <>
+      <ambientLight intensity={0.55} />
+      <hemisphereLight args={['#b7a9ff', '#241f42', 0.6]} />
+      <directionalLight
+        position={[3.5, 6, 4]}
+        intensity={1.5}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+      />
+      <pointLight position={[-2, 2.5, 1.5]} intensity={12} color="#7c5cff" distance={8} />
+
+      <Cabinet />
+
+      {dolls.map((doll, i) => (
+        <Doll3D
+          key={i}
+          emoji={doll.emoji}
+          position={doll.position}
+          ref={(body) => {
+            dollRefs.current[i] = body
+          }}
+        />
+      ))}
+
+      <Claw3D ref={clawRef} open={open} />
+    </>
+  )
+}
