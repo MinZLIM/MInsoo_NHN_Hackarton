@@ -225,6 +225,38 @@ FE는 **획득 인형 목록이 아니라 "획득 개수"만** 보냅니다. 어
 
 ---
 
+## 6.5 시연용 게임 마스터 계정
+
+발표·QA 때 게임을 처음부터 돌리지 않고도 콜렉터함·상점·랭킹을 보여줄 수 있도록 완비된 계정을 하나 둡니다.
+
+| 항목 | 값 |
+| :--- | :--- |
+| 이메일 | `admin@admin.com` |
+| 비밀번호 | `1q2w3e` |
+| 닉네임 | `게임마스터` |
+| 보유 Gold | `1,000,000` |
+| 보유 인형 | **45종 전부 1개씩** |
+| 티어 | 소형/중형 모두 `challenger` |
+
+- FE는 mock에 이 계정을 구현해 두었습니다. (`src/mocks/api.ts` → `MASTER_ACCOUNT`)
+- ⚠️ **BE는 이 분기를 애플리케이션 코드로 옮기면 안 됩니다.** 비밀번호가 클라이언트 번들에 노출됩니다.
+  Supabase에서는 **마이그레이션 시드로 계정을 만들고** 일반 로그인으로 접속하게 합니다.
+
+```sql
+-- 예시: 시드 마이그레이션에서 마스터 계정 데이터만 채운다.
+-- (auth.users 생성은 Supabase Dashboard 또는 admin API로 먼저 처리)
+update profiles set nickname = '게임마스터', gold = 1000000
+ where id = '<master-user-uuid>';
+
+insert into user_dolls (user_id, doll_id, count, first_acquired_at)
+select '<master-user-uuid>', id, 1, now() from dolls
+on conflict (user_id, doll_id) do update set count = excluded.count;
+```
+
+> 🔎 **BE 확인 필요**: 이 계정을 프로덕션에도 남길지, 발표 후 삭제할지.
+
+---
+
 ## 7. 미확정 항목 (Meeting 2에서 결정)
 
 - [ ] 티어 중간 단계 구성 (7단계안 확정 여부)

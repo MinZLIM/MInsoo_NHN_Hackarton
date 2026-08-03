@@ -34,6 +34,8 @@ interface MockRank {
 }
 
 interface MockState {
+  /** 현재 저장된 상태가 어떤 계정 것인지. 다른 계정으로 로그인하면 갈아끼운다. */
+  email: string | null
   signedIn: boolean
   profile: Profile
   /** doll_id → 보유 수량 */
@@ -100,7 +102,30 @@ function applyRankChange(rank: MockRank, score: number): 'promote' | 'demote' | 
  */
 const STARTER_DOLLS: Record<number, number> = { 1: 2, 4: 1, 101: 1, 201: 1 }
 
+/**
+ * 시연용 게임 마스터 계정 (MASTER_ACCOUNT).
+ * 인형 45종을 모두 보유하고 자금 1,000,000 Gold로 시작한다.
+ *
+ * ⚠️ mock 전용이다. 실제 Supabase로 넘어갈 때 이 분기를 그대로 옮기면 안 된다.
+ *    비밀번호가 번들에 그대로 들어가므로, 서버에서는 마이그레이션 시드로 계정을 만들고
+ *    일반 로그인으로 접속해야 한다. (docs/SCHEMA.md §7 참고)
+ */
+export const MASTER_ACCOUNT = {
+  email: 'admin@admin.com',
+  password: '1q2w3e',
+  nickname: '게임마스터',
+  gold: 1_000_000,
+}
+
+const isMaster = (email: string, password: string) =>
+  email.trim().toLowerCase() === MASTER_ACCOUNT.email && password === MASTER_ACCOUNT.password
+
+/** 인형 45종을 1개씩 보유한 상태 */
+const allDolls = (): Record<number, number> =>
+  Object.fromEntries(MOCK_DOLLS.map((d) => [d.id, 1]))
+
 const initialState = (): MockState => ({
+  email: null,
   signedIn: false,
   profile: { id: 'mock-user-0001', nickname: '테스터', gold: 10000 },
   owned: { ...STARTER_DOLLS },
@@ -108,6 +133,22 @@ const initialState = (): MockState => ({
   ranks: {
     small: { tier: 'bronze', best: 0, promoteCnt: 0, demoteCnt: 0 },
     medium: { tier: 'bronze', best: 0, promoteCnt: 0, demoteCnt: 0 },
+  },
+})
+
+const masterState = (): MockState => ({
+  email: MASTER_ACCOUNT.email,
+  signedIn: false,
+  profile: {
+    id: 'mock-master-0000',
+    nickname: MASTER_ACCOUNT.nickname,
+    gold: MASTER_ACCOUNT.gold,
+  },
+  owned: allDolls(),
+  sessions: {},
+  ranks: {
+    small: { tier: 'challenger', best: 220, promoteCnt: 0, demoteCnt: 0 },
+    medium: { tier: 'challenger', best: 180, promoteCnt: 0, demoteCnt: 0 },
   },
 })
 
@@ -146,15 +187,27 @@ const DROP_POOL: Record<GameMode, DollSize> = {
 }
 
 export const mockApi: GameApi = {
-  async signUp(_email, _password, nickname) {
+  async signUp(email, _password, nickname) {
     state = initialState()
+    state.email = email.trim().toLowerCase()
     state.signedIn = true
     state.profile.nickname = nickname
     save()
     await delay(null)
   },
 
-  async signIn(_email, _password) {
+  async signIn(email, password) {
+    const normalized = email.trim().toLowerCase()
+
+    if (isMaster(normalized, password)) {
+      // 마스터 계정은 접속할 때마다 완비된 상태로 되돌린다. 시연 중 소모돼도 다시 로그인하면 복구된다.
+      state = masterState()
+    } else if (state.email !== normalized) {
+      // 다른 계정으로 바꿔 로그인하면 이전 계정의 진행 상황을 물려받지 않는다.
+      state = initialState()
+      state.email = normalized
+    }
+
     state.signedIn = true
     save()
     await delay(null)

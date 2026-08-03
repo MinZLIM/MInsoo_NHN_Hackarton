@@ -296,6 +296,22 @@ p {
   text-align: center;
   line-height: 1.5;
 }
+.login__master {
+  margin-top: 10px;
+  width: 100%;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.login__master:hover {
+  background: var(--surface);
+}
 
 .field {
   display: flex;

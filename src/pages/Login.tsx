@@ -7,6 +7,7 @@ import { Loading } from '@/components/ui/Loading'
 import { messageOf } from '@/types/api'
 import { USE_MOCK } from '@/lib/supabase'
 import { formatGold } from '@/lib/constants'
+import { MASTER_ACCOUNT } from '@/mocks/api'
 
 type Tab = 'signIn' | 'signUp'
 
@@ -132,9 +133,21 @@ export function Login() {
         </form>
 
         {USE_MOCK ? (
-          <p className="login__mock">
-            ⚠️ mock 모드입니다. 아무 이메일/비밀번호나 입력하면 진입됩니다.
-          </p>
+          <div className="login__mock">
+            <p>⚠️ mock 모드입니다. 아무 이메일/비밀번호나 입력하면 진입됩니다.</p>
+            <button
+              type="button"
+              className="login__master"
+              onClick={() => {
+                setTab('signIn')
+                setEmail(MASTER_ACCOUNT.email)
+                setPassword(MASTER_ACCOUNT.password)
+                setError(null)
+              }}
+            >
+              🎮 게임 마스터 계정으로 채우기 (인형 45종 · {formatGold(MASTER_ACCOUNT.gold)} Gold)
+            </button>
+          </div>
         ) : null}
       </div>
     </div>
