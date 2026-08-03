@@ -30,6 +30,20 @@ export const TIME_ATTACK_SEC = 60
 
 /** 대형 타이밍 게임: 이 시각(초)에 맞춰 눌러야 성공 */
 export const LARGE_TARGET_SEC = 20
+/** 대형 타이밍 게임 시작 시각(초) */
+export const LARGE_START_SEC = 1
+/** 20.00초 기준 이 오차(초) 안에 누르면 성공 */
+export const LARGE_TOLERANCE_SEC = 0.15
+
+/**
+ * 모드별 난이도 파라미터 (F2-9). 난이도 하/중/상에 대응한다.
+ * 값을 바꾸면 체감 난이도가 크게 달라지므로 플레이해 보고 조정한다.
+ */
+export const GRAB_SUCCESS_RATE: Record<GameMode, number> = {
+  small: 0.75,
+  medium: 0.45,
+  large: 1, // 대형은 타이밍으로만 판정한다
+}
 
 export const SIZE_LABEL: Record<DollSize, string> = {
   small: '소형',

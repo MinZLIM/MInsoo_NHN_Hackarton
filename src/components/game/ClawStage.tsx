@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { CANVAS_SIZE, ClawMachine, type ClawPhase } from '@/game/clawMachine'
 import { Button } from '@/components/ui/Button'
-import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
+import { GRAB_SUCCESS_RATE, SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 import { dollEmoji } from '@/lib/assets'
+import type { DollSize } from '@/types/api'
 
 interface Props {
+  /** 소형은 직접 조준, 중형은 자동 왕복하는 집게의 타이밍을 맞춘다 */
+  mode: Extract<DollSize, 'small' | 'medium'>
   /** 60초 종료 시 획득 개수를 넘긴다 */
   onEnd: (caught: number) => void
-  grabSuccessRate?: number
 }
 
-const STAGE_EMOJIS = MOCK_DOLLS.filter((d) => d.size === 'small').map((d) =>
-  dollEmoji(d.image_path),
-)
+const emojisOf = (size: DollSize) =>
+  MOCK_DOLLS.filter((d) => d.size === size).map((d) => dollEmoji(d.image_path))
 
-/** 소형 인형뽑기 스테이지 — 캔버스 + 타이머 + 조작부 (F2-2, F2-3) */
-export function ClawStage({ onEnd, grabSuccessRate }: Props) {
+/** 소형·중형 인형뽑기 스테이지 — 캔버스 + 타이머 + 조작부 (F2-2, F2-3, F2-8) */
+export function ClawStage({ mode, onEnd }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const machineRef = useRef<ClawMachine | null>(null)
   // onEnd가 매 렌더 새 함수여도 타이머를 재시작하지 않도록 ref로 고정한다.
@@ -31,13 +32,16 @@ export function ClawStage({ onEnd, grabSuccessRate }: Props) {
   const caughtRef = useRef(0)
   caughtRef.current = caught
 
+  const swing = mode === 'medium'
+
   useEffect(() => {
     if (!canvasRef.current) return
 
     const machine = new ClawMachine({
       canvas: canvasRef.current,
-      emojis: STAGE_EMOJIS,
-      grabSuccessRate,
+      emojis: emojisOf(mode),
+      grabSuccessRate: GRAB_SUCCESS_RATE[mode],
+      control: swing ? 'swing' : 'manual',
       onCatch: setCaught,
       onPhaseChange: setPhase,
     })
@@ -47,15 +51,15 @@ export function ClawStage({ onEnd, grabSuccessRate }: Props) {
     setPhase(machine.getPhase())
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') machine.setMove(-1)
-      else if (e.key === 'ArrowRight') machine.setMove(1)
+      if (!swing && e.key === 'ArrowLeft') machine.setMove(-1)
+      else if (!swing && e.key === 'ArrowRight') machine.setMove(1)
       else if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
         machine.drop()
       }
     }
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') machine.setMove(0)
+      if (!swing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) machine.setMove(0)
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -67,7 +71,7 @@ export function ClawStage({ onEnd, grabSuccessRate }: Props) {
       machine.destroy()
       machineRef.current = null
     }
-  }, [grabSuccessRate])
+  }, [mode, swing])
 
   // 60초 타임어택. 종료 시점의 획득 개수를 넘긴다.
   useEffect(() => {
@@ -106,30 +110,40 @@ export function ClawStage({ onEnd, grabSuccessRate }: Props) {
       </div>
 
       <div className="stage__controls">
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onPointerDown={() => move(-1)}
-          onPointerUp={() => move(0)}
-          onPointerLeave={() => move(0)}
-        >
-          ◀ 왼쪽
-        </Button>
+        {swing ? null : (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onPointerDown={() => move(-1)}
+            onPointerUp={() => move(0)}
+            onPointerLeave={() => move(0)}
+          >
+            ◀ 왼쪽
+          </Button>
+        )}
+
         <Button disabled={busy} onClick={() => machineRef.current?.drop()}>
           집게 내리기
         </Button>
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onPointerDown={() => move(1)}
-          onPointerUp={() => move(0)}
-          onPointerLeave={() => move(0)}
-        >
-          오른쪽 ▶
-        </Button>
+
+        {swing ? null : (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onPointerDown={() => move(1)}
+            onPointerUp={() => move(0)}
+            onPointerLeave={() => move(0)}
+          >
+            오른쪽 ▶
+          </Button>
+        )}
       </div>
 
-      <p className="stage__hint">키보드 ← → 로 이동, Space 로 집게를 내립니다.</p>
+      <p className="stage__hint">
+        {swing
+          ? '집게가 좌우로 움직입니다. Space 로 원하는 위치에서 내리세요.'
+          : '키보드 ← → 로 이동, Space 로 집게를 내립니다.'}
+      </p>
     </div>
   )
 }

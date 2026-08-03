@@ -7,7 +7,8 @@ import { Login } from '@/pages/Login'
 import { Lobby } from '@/pages/Lobby'
 import { Collection } from '@/pages/Collection'
 import { Game } from '@/pages/Game'
-import { Placeholder } from '@/pages/Placeholder'
+import { Rank } from '@/pages/Rank'
+import { Shop } from '@/pages/Shop'
 
 /**
  * GitHub Pages는 SPA 딥링크(새로고침 시 404)를 처리하지 못하므로 HashRouter를 쓴다.
@@ -53,14 +54,7 @@ export default function App() {
           path="/rank"
           element={
             <RequireAuth>
-              <Placeholder
-                title="랭킹"
-                due="08.06 오전"
-                tasks={[
-                  'D-3 모드 드롭다운(소형/중형) + 리더보드 테이블',
-                  'D-4 본인 티어/순위 카드 + 승강등 알림 모달',
-                ]}
-              />
+              <Rank />
             </RequireAuth>
           }
         />
@@ -68,11 +62,7 @@ export default function App() {
           path="/shop"
           element={
             <RequireAuth>
-              <Placeholder
-                title="상점"
-                due="08.06 오전"
-                tasks={['D-1 인형 판매 탭', 'D-2 송금 UI (닉네임 → 금액 → 확인 모달)']}
-              />
+              <Shop />
             </RequireAuth>
           }
         />

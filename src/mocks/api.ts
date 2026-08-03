@@ -26,13 +26,72 @@ import { MOCK_DOLLS } from './dolls'
 const STORAGE_KEY = 'claw-mock-state'
 const LATENCY_MS = 200
 
+interface MockRank {
+  tier: TierName
+  best: number
+  promoteCnt: number
+  demoteCnt: number
+}
+
 interface MockState {
   signedIn: boolean
   profile: Profile
   /** doll_id → 보유 수량 */
   owned: Record<number, number>
   sessions: Record<string, { mode: GameMode; cost: number; done: boolean }>
-  ranks: Record<RankMode, { tier: TierName; best: number }>
+  ranks: Record<RankMode, MockRank>
+}
+
+/**
+ * 티어 기준표 (docs/SCHEMA.md §2.5).
+ * 조건 점수를 필요 횟수만큼 먼저 달성하면 즉시 승급/강등한다. (REQ-RANK-02)
+ */
+const TIER_ORDER: TierName[] = [
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'diamond',
+  'master',
+  'challenger',
+]
+
+const TIER_RULES: Record<
+  TierName,
+  { promoteScore: number; promoteCount: number; demoteScore: number; demoteCount: number }
+> = {
+  bronze: { promoteScore: 20, promoteCount: 3, demoteScore: 0, demoteCount: 99 },
+  silver: { promoteScore: 30, promoteCount: 3, demoteScore: 20, demoteCount: 4 },
+  gold: { promoteScore: 40, promoteCount: 3, demoteScore: 25, demoteCount: 4 },
+  platinum: { promoteScore: 50, promoteCount: 3, demoteScore: 30, demoteCount: 4 },
+  diamond: { promoteScore: 60, promoteCount: 3, demoteScore: 35, demoteCount: 4 },
+  master: { promoteScore: 70, promoteCount: 3, demoteScore: 40, demoteCount: 4 },
+  challenger: { promoteScore: 999, promoteCount: 99, demoteScore: 50, demoteCount: 4 },
+}
+
+/** 한 판의 점수를 반영해 승·강등을 판정한다. 서버 로직(B2-7)의 mock 대응물. */
+function applyRankChange(rank: MockRank, score: number): 'promote' | 'demote' | 'none' {
+  const rule = TIER_RULES[rank.tier]
+  const level = TIER_ORDER.indexOf(rank.tier)
+
+  if (score >= rule.promoteScore) {
+    rank.promoteCnt += 1
+    if (rank.promoteCnt >= rule.promoteCount && level < TIER_ORDER.length - 1) {
+      rank.tier = TIER_ORDER[level + 1]
+      rank.promoteCnt = 0
+      rank.demoteCnt = 0
+      return 'promote'
+    }
+  } else if (score < rule.demoteScore) {
+    rank.demoteCnt += 1
+    if (rank.demoteCnt >= rule.demoteCount && level > 0) {
+      rank.tier = TIER_ORDER[level - 1]
+      rank.promoteCnt = 0
+      rank.demoteCnt = 0
+      return 'demote'
+    }
+  }
+  return 'none'
 }
 
 /**
@@ -46,7 +105,10 @@ const initialState = (): MockState => ({
   profile: { id: 'mock-user-0001', nickname: '테스터', gold: 10000 },
   owned: { ...STARTER_DOLLS },
   sessions: {},
-  ranks: { small: { tier: 'bronze', best: 0 }, medium: { tier: 'bronze', best: 0 } },
+  ranks: {
+    small: { tier: 'bronze', best: 0, promoteCnt: 0, demoteCnt: 0 },
+    medium: { tier: 'bronze', best: 0, promoteCnt: 0, demoteCnt: 0 },
+  },
 })
 
 function load(): MockState {
@@ -146,11 +208,15 @@ export const mockApi: GameApi = {
     const score = caught * SCORE_PER_DOLL
     let rank: FinishGameResult['rank'] = null
 
+    // 대형은 랭킹 대상이 아니다 (REQ-RANK-01)
     if (session.mode !== 'large') {
       const mode = session.mode as RankMode
       const current = state.ranks[mode]
       if (score > current.best) current.best = score
-      rank = { mode, before: current.tier, after: current.tier, changed: 'none' }
+
+      const before = current.tier
+      const changed = applyRankChange(current, score)
+      rank = { mode, before, after: current.tier, changed }
     }
 
     save()

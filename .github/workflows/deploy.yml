@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Actions 탭에서 수동 실행할 수 있게 한다 (배포 검증용)
+  workflow_dispatch:
+
+# GITHUB_TOKEN에 Pages 배포 권한을 준다
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 항상 최신 커밋 하나만 진행한다
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        # Secrets가 비어 있으면 앱이 자동으로 mock 모드로 동작한다. (src/lib/supabase.ts)
+        # BE가 Supabase 프로젝트를 만들면 아래 두 Secret만 등록하면 실 연동으로 전환된다.
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

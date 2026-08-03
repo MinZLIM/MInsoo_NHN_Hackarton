@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
 import { ClawStage } from '@/components/game/ClawStage'
+import { TimingStage } from '@/components/game/TimingStage'
 import { DollImage } from '@/components/DollImage'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -14,6 +15,7 @@ import {
   MODE_DIFFICULTY,
   MODE_LABEL,
   SCORE_PER_DOLL,
+  TIER_LABEL,
   formatGold,
 } from '@/lib/constants'
 import { messageOf, type FinishGameResult, type GameMode } from '@/types/api'
@@ -25,10 +27,10 @@ import { messageOf, type FinishGameResult, type GameMode } from '@/types/api'
  */
 type Step = 'select' | 'confirm' | 'playing' | 'settling' | 'result'
 
-const MODES: { mode: GameMode; icon: string; rule: string; ready: boolean }[] = [
-  { mode: 'small', icon: '🧸', rule: '60초 타임어택 · 집게 조작', ready: true },
-  { mode: 'medium', icon: '🐻', rule: '60초 타임어택 · 회전 집게', ready: false },
-  { mode: 'large', icon: '🐉', rule: '20.00초 타이밍 클릭 (1회성)', ready: false },
+const MODES: { mode: GameMode; icon: string; rule: string }[] = [
+  { mode: 'small', icon: '🧸', rule: '60초 타임어택 · 집게 직접 조작' },
+  { mode: 'medium', icon: '🐻', rule: '60초 타임어택 · 자동 왕복 집게' },
+  { mode: 'large', icon: '🐉', rule: '20.00초 타이밍 클릭 (1회성)' },
 ]
 
 export function Game() {
@@ -101,13 +103,9 @@ export function Game() {
 
       {step === 'select' ? (
         <ul className="mode-list">
-          {MODES.map(({ mode: m, icon, rule, ready }) => (
+          {MODES.map(({ mode: m, icon, rule }) => (
             <li key={m}>
-              <button
-                className={`mode-card${ready ? '' : ' mode-card--disabled'}`}
-                disabled={!ready}
-                onClick={() => openConfirm(m)}
-              >
+              <button className="mode-card" onClick={() => openConfirm(m)}>
                 <span className="mode-card__icon" aria-hidden>
                   {icon}
                 </span>
@@ -118,14 +116,19 @@ export function Game() {
                     난이도 {MODE_DIFFICULTY[m]} · 입장료 {formatGold(ENTRY_COST[m])} Gold
                   </span>
                 </span>
-                {ready ? null : <span className="mode-card__badge">준비 중</span>}
               </button>
             </li>
           ))}
         </ul>
       ) : null}
 
-      {step === 'playing' ? <ClawStage onEnd={onGameEnd} /> : null}
+      {step === 'playing' ? (
+        mode === 'large' ? (
+          <TimingStage onEnd={onGameEnd} />
+        ) : (
+          <ClawStage mode={mode} onEnd={onGameEnd} />
+        )
+      ) : null}
 
       {step === 'settling' ? (
         settleError ? (
@@ -209,10 +212,11 @@ export function Game() {
             <p className="result__empty">획득한 인형이 없습니다. 다음엔 꼭!</p>
           )}
 
+          {/* 승·강등 알림 (REQ-RANK-02) */}
           {result?.rank && result.rank.changed !== 'none' ? (
-            <p className="result__rank">
-              {result.rank.changed === 'promote' ? '🎉 승급!' : '📉 강등'} {result.rank.before} →{' '}
-              {result.rank.after}
+            <p className={`result__rank${result.rank.changed === 'demote' ? ' is-demote' : ''}`}>
+              {result.rank.changed === 'promote' ? '🎉 승급!' : '📉 강등'}{' '}
+              {TIER_LABEL[result.rank.before]} → {TIER_LABEL[result.rank.after]}
             </p>
           ) : null}
         </div>

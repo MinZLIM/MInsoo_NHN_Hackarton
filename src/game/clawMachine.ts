@@ -1,14 +1,19 @@
 import Matter from 'matter-js'
 
 /**
- * 소형 인형뽑기 물리 엔진 (F2-2).
+ * 인형뽑기 물리 엔진 (F2-2, F2-8).
  * React와 무관한 순수 TS. 화면은 Matter.Render가 그리고, 집게와 인형 이모지는 afterRender에서 덧그린다.
  *
- * 진행 흐름: aim(좌우 조준) → descend(하강) → grab(파지 판정) → ascend(상승)
+ * 진행 흐름: aim(조준) → descend(하강) → grab(파지 판정) → ascend(상승)
  *          → carry(투입구로 이동) → release(낙하) → aim
+ *
+ * 소형과 중형은 물리·판정이 같고 조준 방식만 다르다.
+ *   - manual: 플레이어가 좌우로 직접 움직인다 (소형)
+ *   - swing : 집게가 좌우로 자동 왕복하고 타이밍만 맞춘다 (중형)
  */
 
 export type ClawPhase = 'aim' | 'descend' | 'grab' | 'ascend' | 'carry' | 'release' | 'stopped'
+export type ClawControl = 'manual' | 'swing'
 
 export interface ClawMachineOptions {
   canvas: HTMLCanvasElement
@@ -17,6 +22,8 @@ export interface ClawMachineOptions {
   onPhaseChange?: (phase: ClawPhase) => void
   /** 집게가 인형을 잡는 데 성공할 확률 (난이도). 아이템으로 올릴 수 있다. */
   grabSuccessRate?: number
+  /** 조준 방식. 기본은 manual(소형) */
+  control?: ClawControl
   /** 화면에 배치할 인형 이모지 */
   emojis: string[]
 }
@@ -33,6 +40,8 @@ const LIP_HEIGHT = 34
 const CLAW_TOP_Y = 56
 const CLAW_MAX_Y = HEIGHT - WALL - 46
 const CLAW_SPEED_X = 4.2
+/** swing 모드에서 집게가 자동 왕복하는 속도 — 수동보다 빨라야 타이밍 게임이 된다 */
+const SWING_SPEED_X = 5.6
 const CLAW_SPEED_Y = 3.4
 const CARRY_SPEED = 3.6
 /** 집게 중심에서 이 거리 안에 있는 인형을 잡는다 */
@@ -57,6 +66,8 @@ export class ClawMachine {
   private caught = 0
   /** aim 단계에서 -1(왼쪽) / 1(오른쪽) / 0(정지) */
   private moveDir = 0
+  /** swing 모드의 현재 진행 방향 */
+  private swingDir: 1 | -1 = 1
   private destroyed = false
 
   private readonly opts: Required<Pick<ClawMachineOptions, 'onCatch' | 'grabSuccessRate' | 'emojis'>> &
@@ -194,13 +205,20 @@ export class ClawMachine {
 
   private tick = () => {
     switch (this.phase) {
-      case 'aim':
-        this.clawX = clamp(
-          this.clawX + this.moveDir * CLAW_SPEED_X,
-          HOLE_WIDTH + 30,
-          WIDTH - WALL - 30,
-        )
+      case 'aim': {
+        const min = HOLE_WIDTH + 30
+        const max = WIDTH - WALL - 30
+
+        if (this.opts.control === 'swing') {
+          // 좌우 끝에 닿으면 방향을 뒤집어 계속 왕복한다
+          const next = this.clawX + this.swingDir * SWING_SPEED_X
+          if (next <= min || next >= max) this.swingDir = this.swingDir === 1 ? -1 : 1
+          this.clawX = clamp(next, min, max)
+        } else {
+          this.clawX = clamp(this.clawX + this.moveDir * CLAW_SPEED_X, min, max)
+        }
         break
+      }
 
       case 'descend': {
         this.clawY += CLAW_SPEED_Y
