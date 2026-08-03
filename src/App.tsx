@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/Toaster'
 import { Login } from '@/pages/Login'
 import { Lobby } from '@/pages/Lobby'
 import { Collection } from '@/pages/Collection'
+import { Game } from '@/pages/Game'
 import { Placeholder } from '@/pages/Placeholder'
 
 /**
@@ -44,16 +45,7 @@ export default function App() {
           path="/game"
           element={
             <RequireAuth>
-              <Placeholder
-                title="게임 실행"
-                due="08.05"
-                tasks={[
-                  'F2-1 게임 공용 프레임(비용 확인 → start_game → 플레이 → 정산)',
-                  'F2-2 소형: 집게 조작 + 60초 타임어택 (P0)',
-                  'F2-7 대형: 20.00초 타이밍 클릭 (P1)',
-                  'F2-8 중형: 회전 집게 + 상단 바 낙하 (P1)',
-                ]}
-              />
+              <Game />
             </RequireAuth>
           }
         />
