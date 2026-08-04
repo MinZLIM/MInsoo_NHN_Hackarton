@@ -52,12 +52,15 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
   const dollRefs = useRef<(RapierRigidBody | null)[]>([])
 
   const [releasedIds, setReleasedIds] = useState<number[]>([])
+  /** 배출 완료 — 씬에서 내린다. 획득한 인형은 기계 밖으로 나가므로 안에 남으면 안 된다. */
+  const [dispensedIds, setDispensedIds] = useState<number[]>([])
 
   const spin = useRef(0)
   const phase = useRef<ClipPhase>('ready')
   const barY = useRef<number>(CLIP.barTopY)
   const released = useRef(new Set<number>())
   const caught = useRef(0)
+  const dispenseTimers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const slots = useMemo(
     () =>
@@ -89,6 +92,8 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
         setPhase('pressing')
       },
     })
+    const timers = dispenseTimers.current
+    return () => timers.forEach(clearTimeout)
     // onReady는 부모에서 고정된 함수를 넘긴다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -131,6 +136,13 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
     caught.current += 1
     onCatch(caught.current)
     onVerdict(true)
+
+    // 바닥까지 떨어지는 걸 보여준 뒤 배출 처리한다
+    const timer = setTimeout(
+      () => setDispensedIds((prev) => [...prev, target]),
+      CLIP.dispenseDelayMs,
+    )
+    dispenseTimers.current.push(timer)
   }
 
   useFrame((_, rawDelta) => {
@@ -174,7 +186,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
   return (
     <>
       <SceneLighting />
-      <Cabinet />
+      <Cabinet prizeHole={false} />
       <GroundShadows y={0.015} scale={8} />
 
       {/* 천장에서 내려온 회전축 */}
@@ -221,17 +233,19 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
         position은 생성 시점 값으로 고정한다 — 리렌더마다 새 값을 주면
         이미 떨어진 인형이 원래 자리로 되돌아가 잔상처럼 남는다.
       */}
-      {slots.map((slot, i) => (
-        <Doll3D
-          key={i}
-          emoji={slot.emoji}
-          bodyType={releasedIds.includes(i) ? 'dynamic' : 'kinematicPosition'}
-          position={slot.spawn}
-          ref={(body) => {
-            dollRefs.current[i] = body
-          }}
-        />
-      ))}
+      {slots.map((slot, i) =>
+        dispensedIds.includes(i) ? null : (
+          <Doll3D
+            key={i}
+            emoji={slot.emoji}
+            bodyType={releasedIds.includes(i) ? 'dynamic' : 'kinematicPosition'}
+            position={slot.spawn}
+            ref={(body) => {
+              dollRefs.current[i] = body
+            }}
+          />
+        ),
+      )}
 
       {/* 누름 바 — 정면 한 자리에서만 오르내린다 */}
       <group position={[triggerX, 0, triggerZ]}>
