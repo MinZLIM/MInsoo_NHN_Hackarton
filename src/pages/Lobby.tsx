@@ -17,15 +17,20 @@ interface Hotspot {
 }
 
 /**
- * 배경 일러스트 좌표계 기준 핫스팟.
- * 배경은 object-fit: cover로 채우므로 값은 그림 자체의 비율(%)을 따른다.
+ * 배경 일러스트(1537×1330) 좌표계 기준 핫스팟 — 그림 속 해당 오브젝트 위에 놓는다.
+ * 그림 전체가 항상 화면에 들어오므로(contain) %가 그대로 화면 위치가 된다.
  */
 const HOTSPOTS: Hotspot[] = [
-  { key: 'collection', label: '콜렉터 함', to: '/collection', x: 23.5, y: 10.5 },
-  { key: 'game', label: '게임 실행', to: '/game', x: 20.1, y: 77.2 },
-  { key: 'rank', label: '랭킹 확인', to: '/rank', x: 85.4, y: 43.3 },
-  { key: 'shop', label: '상점', to: '/shop', x: 83.7, y: 88.0 },
-  { key: 'multi', label: '실시간 매칭', x: 54, y: 60, disabled: true },
+  // 좌측 상단 유리 진열장
+  { key: 'collection', label: '콜렉터 함', to: '/collection', x: 22.4, y: 23.7 },
+  // 좌측 인형뽑기 기계 열
+  { key: 'game', label: '게임 실행', to: '/game', x: 16, y: 68.8 },
+  // 우측 상단 '클로 마스터 랭킹' 전광판
+  { key: 'rank', label: '랭킹 확인', to: '/rank', x: 86.9, y: 23.1 },
+  // 우측 카운터
+  { key: 'shop', label: '상점', to: '/shop', x: 82.3, y: 69.9 },
+  // 통로 가운데 키오스크
+  { key: 'multi', label: '실시간 매칭', x: 54.7, y: 56.4, disabled: true },
 ]
 
 export function Lobby() {
@@ -35,10 +40,16 @@ export function Lobby() {
 
   return (
     <div className="arcade">
+      {/* 그림이 세로로 길어 좌우가 남는다. 같은 그림을 흐리게 깔아 여백을 메운다. */}
+      <div
+        className="arcade__backdrop"
+        style={{ backgroundImage: `url(${sceneSmall})` }}
+        aria-hidden
+      />
+
       {/*
-        배경 그림에는 메뉴 라벨이 이미 그려져 있다. 아래 핫스팟이 그 위를 정확히 덮어야 하므로
-        그림과 핫스팟을 같은 좌표계(stage) 안에 두고, stage 자체를 화면에 맞춰 늘린다.
-        img에 object-fit: cover를 주면 잘린 만큼 %가 어긋나므로 쓰지 않는다.
+        핫스팟이 그림 속 오브젝트 위에 정확히 얹히려면 좌표계가 하나여야 한다.
+        그림과 핫스팟을 같은 stage에 담고, stage 전체가 화면에 들어오도록 맞춘다.
       */}
       <div className="arcade__stage">
         <img

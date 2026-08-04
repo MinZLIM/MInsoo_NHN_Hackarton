@@ -8,6 +8,8 @@ import { messageOf } from '@/types/api'
 import { USE_MOCK } from '@/lib/supabase'
 import { formatGold } from '@/lib/constants'
 import { MASTER_ACCOUNT } from '@/mocks/api'
+import storefront from '@/assets/login-scene.webp'
+import storefrontSmall from '@/assets/login-scene-sm.webp'
 
 type Tab = 'signIn' | 'signUp'
 
@@ -58,8 +60,19 @@ export function Login() {
 
   return (
     <div className="login">
+      {/* 가게 전경. 간판에 이미 제목이 그려져 있어 카드 안에서는 반복하지 않는다. */}
+      <img
+        className="login__scene"
+        src={storefront}
+        srcSet={`${storefrontSmall} 770w, ${storefront} 1540w`}
+        sizes="100vw"
+        alt="인형뽑기 게임장 입구"
+        fetchPriority="high"
+      />
+      <div className="login__scrim" aria-hidden />
+
       <div className="login__card">
-        <h1 className="login__logo">🧸 인형뽑기</h1>
+        <h1 className="login__logo">🧸 웹 인형뽑기 게임</h1>
         <p className="login__desc">
           가입하면 <strong>{formatGold(10000)} Gold</strong>를 드립니다.
         </p>
