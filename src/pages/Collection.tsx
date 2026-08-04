@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { AppHeader } from '@/components/AppHeader'
 import { DollImage } from '@/components/DollImage'
+import { DollDetail } from '@/components/DollDetail'
 import { Loading } from '@/components/ui/Loading'
 import { Button } from '@/components/ui/Button'
 import { useAsync } from '@/hooks/useAsync'
 import { api } from '@/lib/api'
-import { SIZE_LABEL, TOTAL_DOLLS, formatGold } from '@/lib/constants'
+import { SIZE_LABEL, TOTAL_DOLLS } from '@/lib/constants'
 import type { CollectionEntry, DollSize } from '@/types/api'
 
 type Filter = 'all' | DollSize
@@ -19,6 +20,8 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 export function Collection() {
   const [filter, setFilter] = useState<Filter>('all')
+  const [selected, setSelected] = useState<CollectionEntry | null>(null)
+
   const { data, loading, error, reload } = useAsync<CollectionEntry[]>(
     () => api.getCollection(),
     [],
@@ -76,27 +79,42 @@ export function Collection() {
         </div>
       ) : null}
 
+      {/* 하얀 프레임의 유리 진열장. 칸 사이 간격이 그대로 프레임 살이 된다. */}
       {!loading && !error ? (
-        <ul className="doll-grid">
-          {visible.map((doll) => (
-            <li
-              key={doll.id}
-              className={`doll-card${doll.owned ? '' : ' doll-card--locked'}`}
-              title={doll.owned ? doll.name : '미획득'}
-            >
-              <DollImage
-                imagePath={doll.image_path}
-                name={doll.name}
-                masked={!doll.owned}
-                size={doll.size}
-              />
-              <span className="doll-card__name">{doll.owned ? doll.name : '???'}</span>
-              <span className="doll-card__meta">
-                {doll.owned ? `×${formatGold(doll.count)}` : SIZE_LABEL[doll.size]}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="showcase">
+          <div className="showcase__frame">
+            <ul className="showcase__grid">
+              {visible.map((doll) => (
+                <li key={doll.id} className="showcase__slot">
+                  <button
+                    className={`vitrine${doll.owned ? '' : ' vitrine--locked'}`}
+                    onClick={() => setSelected(doll)}
+                    aria-label={doll.owned ? doll.name : '미획득 인형'}
+                  >
+                    <span className="vitrine__back" aria-hidden />
+                    <span className="vitrine__figure">
+                      <DollImage
+                        imagePath={doll.image_path}
+                        name={doll.name}
+                        masked={!doll.owned}
+                        size={doll.size}
+                      />
+                    </span>
+                    <span className="vitrine__shelf" aria-hidden />
+                    <span className="vitrine__glass" aria-hidden />
+
+                    <span className="vitrine__plate">
+                      <span className="vitrine__name">{doll.owned ? doll.name : '???'}</span>
+                      <span className="vitrine__meta">
+                        {doll.owned ? `×${doll.count}` : SIZE_LABEL[doll.size]}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       ) : null}
 
       {!loading && !error && visible.length === 0 ? (
@@ -104,6 +122,8 @@ export function Collection() {
           <p>표시할 인형이 없습니다.</p>
         </div>
       ) : null}
+
+      <DollDetail doll={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }

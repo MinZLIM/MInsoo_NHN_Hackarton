@@ -255,7 +255,6 @@ p {
 /* 카드 표면 — 위쪽에 미세한 하이라이트를 줘 유리처럼 보이게 한다 */
 .menu-card,
 .mode-card,
-.doll-card,
 .sell-item,
 .rank-row,
 .login__card,
@@ -567,42 +566,252 @@ p {
   transition: width 0.3s;
 }
 
-.doll-grid {
+
+/* ---------- Collection: 유리 진열장 ---------- */
+.showcase {
+  padding: 12px;
+  border-radius: var(--r-lg);
+  /* 진열장 바깥 몸체 — 은은한 금속 프레임 */
+  background: linear-gradient(180deg, #d8d4ea 0%, #b7b2d0 55%, #cbc7e0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    var(--shadow-md);
+}
+.showcase__frame {
+  border-radius: 12px;
+  padding: 6px;
+  /* 칸 사이 간격이 그대로 하얀 격자 살이 된다 */
+  background: linear-gradient(180deg, #ffffff 0%, #eceafa 45%, #dedbf0 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(120, 110, 170, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.95);
+}
+.showcase__grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 6px;
 }
-.doll-card {
-  transition: transform 0.18s var(--ease), border-color 0.18s var(--ease);
+.showcase__slot {
+  display: flex;
+}
+
+/* 칸 하나 = 유리 진열 큐브 */
+.vitrine {
+  position: relative;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 8px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
+  justify-content: flex-end;
+  gap: 0;
+  min-height: 148px;
+  padding: 14px 8px 0;
+  border: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+  font-family: inherit;
+  /* 진열장 내부 — 위에서 조명이 떨어지는 느낌 */
+  background:
+    linear-gradient(180deg, #3b3568 0%, #262046 45%, #1b1637 100%);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
-.doll-card:not(.doll-card--locked):hover {
+
+/* 뒷벽 조명 */
+.vitrine__back {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 45% at 50% 12%, rgba(190, 210, 255, 0.4), transparent 70%);
+}
+
+.vitrine__figure {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  padding-bottom: 6px;
+  transition: transform 0.25s var(--ease);
+}
+.vitrine:hover .vitrine__figure {
+  transform: translateY(-3px) scale(1.08);
+}
+
+/* 인형이 놓인 유리 선반 */
+.vitrine__shelf {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 40px;
+  height: 7px;
+  z-index: 1;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(226, 240, 255, 0.9), rgba(150, 175, 220, 0.45));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55),
+    0 6px 12px rgba(0, 0, 0, 0.45);
+}
+/* 선반에 비치는 반사 */
+.vitrine__shelf::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 100%;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(190, 215, 255, 0.28), transparent);
+  filter: blur(1px);
+}
+
+/* 앞유리 — 대각선 하이라이트 */
+.vitrine__glass {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.05) 26%,
+      transparent 42%),
+    linear-gradient(300deg, rgba(255, 255, 255, 0.09) 0%, transparent 30%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* 이름표 */
+.vitrine__plate {
+  position: relative;
+  z-index: 4;
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  padding: 6px 6px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: linear-gradient(180deg, rgba(245, 243, 255, 0.94), rgba(222, 218, 240, 0.94));
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.7);
+}
+.vitrine__name {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #241e46;
+  line-height: 1.2;
+}
+.vitrine__meta {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #6f688f;
+}
+
+.vitrine:hover,
+.vitrine:focus-visible {
   transform: translateY(-3px);
-  border-color: var(--border-hi);
+  box-shadow:
+    0 0 0 2px var(--primary),
+    0 14px 28px rgba(0, 0, 0, 0.55);
+  outline: none;
+  z-index: 5;
 }
-.doll-card--locked {
-  background: var(--bg);
+
+/* 미획득 — 성에 낀 유리 뒤 실루엣 (REQ-COLL-02) */
+.vitrine--locked {
+  background: linear-gradient(180deg, #241f45 0%, #17132e 60%, #120f26 100%);
 }
-.doll-card__name {
-  font-size: 13px;
-  font-weight: 600;
+.vitrine--locked .vitrine__back {
+  background: radial-gradient(70% 45% at 50% 12%, rgba(150, 160, 200, 0.16), transparent 70%);
 }
-.doll-card--locked .doll-card__name {
-  color: var(--text-dim);
+.vitrine--locked .vitrine__glass {
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+    rgba(140, 150, 190, 0.1);
+  backdrop-filter: blur(0.5px);
 }
-.doll-card__meta {
-  font-size: 11px;
-  color: var(--text-dim);
+.vitrine--locked .vitrine__plate {
+  background: linear-gradient(180deg, rgba(190, 186, 214, 0.72), rgba(163, 159, 190, 0.72));
+}
+.vitrine--locked .vitrine__name {
+  color: #423b66;
+}
+
+@media (max-width: 520px) {
+  .showcase__grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  .vitrine {
+    min-height: 128px;
+  }
+}
+
+/* ---------- 인형 상세 (3D 뷰어 예정 자리) ---------- */
+.doll-detail__viewer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-hi);
+  background:
+    radial-gradient(60% 50% at 50% 30%, rgba(150, 170, 255, 0.22), transparent 70%),
+    linear-gradient(180deg, #2a2452 0%, #17132f 100%);
+  overflow: hidden;
+}
+/* 바닥 반사 — 3D 뷰어가 들어와도 그대로 쓸 수 있는 무대 */
+.doll-detail__viewer::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 34%;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.55), transparent 70%);
+}
+.doll-detail__viewer .doll-image {
+  transform: scale(2.4);
+  z-index: 1;
+}
+.doll-detail__hint {
+  position: absolute;
+  bottom: 12px;
+  font-size: var(--fs-xs);
+  color: var(--text-mute);
+}
+.doll-detail__viewer.is-locked .doll-image {
+  transform: scale(2.4);
+}
+
+.doll-detail__spec {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.doll-detail__spec > div {
+  padding: 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.doll-detail__spec dt {
+  font-size: var(--fs-xs);
+  color: var(--text-mute);
+}
+.doll-detail__spec dd {
+  margin: 3px 0 0;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--text);
+}
+.doll-detail__spec dd.is-gold {
+  color: var(--gold);
 }
 
 .doll-image {
