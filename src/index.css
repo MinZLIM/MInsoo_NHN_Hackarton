@@ -1015,6 +1015,263 @@ p {
   color: var(--danger);
 }
 
+
+/* ---------- Lobby: 아케이드 전경 ---------- */
+.arcade {
+  --scene-ratio: 1546 / 808;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #0b0918;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: rise 0.4s var(--ease) both;
+}
+
+/*
+  그림과 핫스팟이 같은 좌표계를 쓰도록 stage 하나에 함께 담는다.
+  가로가 넉넉하면 화면을 꽉 채우고(cover), 세로로 길어지면 그림 전체를 보여준다.
+*/
+.arcade__stage {
+  position: relative;
+  aspect-ratio: var(--scene-ratio);
+  width: max(100%, calc(100dvh * 1546 / 808));
+  flex: none;
+}
+.arcade__bg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.arcade__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 6, 20, 0.82) 0%, rgba(8, 6, 20, 0.45) 7%,
+      rgba(8, 6, 20, 0) 15%),
+    linear-gradient(0deg, rgba(8, 6, 20, 0.7) 0%, rgba(8, 6, 20, 0) 14%);
+}
+
+.arcade__hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px clamp(14px, 2.4vw, 30px);
+}
+.arcade__title {
+  font-size: clamp(14px, 1.7vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.95);
+}
+.arcade__status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.arcade__signout {
+  padding: 7px 13px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(12, 9, 26, 0.6);
+  backdrop-filter: blur(8px);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.arcade__signout:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.arcade__greeting {
+  position: absolute;
+  left: clamp(14px, 2.4vw, 30px);
+  bottom: 16px;
+  z-index: 3;
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+}
+.arcade__greeting strong {
+  color: #fff;
+}
+
+.arcade__menu {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+/*
+  그림에 그려진 라벨을 정확히 덮어야 하므로 크기를 stage 폭(cqw)에 비례시킨다.
+  글자 수가 같아 원본 라벨과 거의 같은 크기로 맞아 들어간다.
+*/
+.arcade__stage {
+  container-type: inline-size;
+}
+.hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 0.55em 1.3em;
+  border-radius: 0.4em;
+  border: 0.06em solid rgba(255, 255, 255, 0.92);
+  background: rgba(236, 232, 255, 0.96);
+  color: #201a3d;
+  font-family: inherit;
+  font-size: clamp(13px, 2.9cqw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 0.12em rgba(124, 92, 255, 0.35),
+    0 0.3em 0.9em rgba(0, 0, 0, 0.6);
+  transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease),
+    background 0.18s var(--ease);
+  animation: hotspot-in 0.45s var(--ease) both;
+}
+.hotspot:nth-child(2) { animation-delay: 0.06s; }
+.hotspot:nth-child(3) { animation-delay: 0.12s; }
+.hotspot:nth-child(4) { animation-delay: 0.18s; }
+.hotspot:nth-child(5) { animation-delay: 0.24s; }
+
+@keyframes hotspot-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px)) scale(0.94);
+  }
+}
+.hotspot:hover:not(.hotspot--disabled),
+.hotspot:focus-visible {
+  transform: translate(-50%, -50%) scale(1.07);
+  background: #fff;
+  box-shadow:
+    0 0 0 0.2em rgba(124, 92, 255, 0.55),
+    0 0.45em 1.2em rgba(0, 0, 0, 0.65);
+  outline: none;
+}
+.hotspot:active:not(.hotspot--disabled) {
+  transform: translate(-50%, -50%) scale(1.01);
+}
+.hotspot--disabled {
+  background: rgba(116, 110, 148, 0.9);
+  color: rgba(255, 255, 255, 0.78);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0.25em 0.7em rgba(0, 0, 0, 0.55);
+  cursor: not-allowed;
+}
+.hotspot__badge {
+  margin-left: 0.4em;
+  padding: 0.12em 0.4em;
+  border-radius: var(--r-full);
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.6em;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* 기본은 목록 숨김 — 가로 화면에서는 그림 위 라벨을 쓴다 */
+.arcade__list {
+  display: none;
+}
+
+/*
+  그림보다 세로로 긴 화면: 좌우가 잘리면 라벨이 화면 밖으로 나가므로
+  그림 전체를 보여주고(contain) 라벨 위치를 유지한다.
+*/
+@media (max-aspect-ratio: 1546 / 808) {
+  .arcade__stage {
+    width: 100%;
+  }
+}
+
+/* 세로 화면(주로 휴대폰): 전경이 너무 작아지므로 배경은 채우고 메뉴는 목록으로 */
+@media (max-aspect-ratio: 1 / 1) {
+  .arcade__stage {
+    width: max(100%, calc(100dvh * 1546 / 808));
+    opacity: 0.45;
+    filter: saturate(0.9);
+  }
+  .arcade__menu {
+    display: none;
+  }
+  .arcade__vignette {
+    background: linear-gradient(180deg, rgba(8, 6, 20, 0.9) 0%, rgba(8, 6, 20, 0.55) 40%,
+      rgba(8, 6, 20, 0.92) 100%);
+  }
+  .arcade__list {
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 3;
+    display: grid;
+    gap: 10px;
+    padding: 0 18px 64px;
+  }
+  .arcade__list-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 17px;
+    border-radius: var(--r-md);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(24, 19, 48, 0.86);
+    backdrop-filter: blur(10px);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-md);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+  .arcade__list-item:active:not(.is-disabled) {
+    transform: translateY(1px);
+    background: rgba(36, 29, 72, 0.92);
+  }
+  .arcade__list-item.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .arcade__list-item .hotspot__badge {
+    display: inline;
+    font-size: 0.68em;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .arcade__greeting {
+    bottom: auto;
+    top: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hotspot,
+  .arcade {
+    animation: none;
+  }
+}
+
+
 @media (max-width: 520px) {
   .app-header {
     flex-wrap: wrap;
