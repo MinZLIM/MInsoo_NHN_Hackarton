@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Joystick } from '@/components/game/Joystick'
+import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 import { ClawScene, type ClawPhase, type ClawSceneHandle } from '@/game/three/ClawScene'
-import { GRAB_SUCCESS_RATE, SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
+import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 import { dollEmoji } from '@/lib/assets'
 import type { DollSize } from '@/types/api'
@@ -34,7 +35,27 @@ export function ClawStage({ onEnd }: Props) {
   }, [])
 
   const move = (x: number, z: number) => handleRef.current?.move(x, z)
-  const drop = () => handleRef.current?.drop()
+  const drop = () => {
+    playSfx('click')
+    handleRef.current?.drop()
+  }
+
+  // 게임 중에만 배경 음악을 튼다
+  useEffect(() => {
+    startBgm()
+    return stopBgm
+  }, [])
+
+  // 획득할 때마다 효과음
+  useEffect(() => {
+    if (caught > 0) playSfx('win')
+  }, [caught])
+
+  // 집게가 내려가기 시작하면 모터음, 집는 순간 철컹
+  useEffect(() => {
+    if (phase === 'descend') playSfx('motor')
+    else if (phase === 'grab') playSfx('grab')
+  }, [phase])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -102,7 +123,6 @@ export function ClawStage({ onEnd }: Props) {
           <ClawScene
             emojis={emojisOf('small')}
             control="manual"
-            grabSuccessRate={GRAB_SUCCESS_RATE.small}
             onCatch={setCaught}
             onPhaseChange={setPhase}
             onReady={onReady}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { PrizeBox } from '@/game/three/PrizeBox'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 import { dollEmoji } from '@/lib/assets'
+import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 import {
   LARGE_START_SEC,
   LARGE_TARGET_SEC,
@@ -43,6 +44,7 @@ export function TimingStage({ onEnd }: Props) {
 
   useEffect(() => {
     startedAt.current = Date.now()
+    startBgm()
 
     const loop = () => {
       if (doneRef.current) return
@@ -70,6 +72,7 @@ export function TimingStage({ onEnd }: Props) {
     return () => {
       cancelAnimationFrame(rafRef.current)
       window.removeEventListener('keydown', onKeyDown)
+      stopBgm()
     }
   }, [])
 
@@ -79,6 +82,7 @@ export function TimingStage({ onEnd }: Props) {
     cancelAnimationFrame(rafRef.current)
 
     const success = Math.abs(stopped - LARGE_TARGET_SEC) <= LARGE_TOLERANCE_SEC
+    playSfx(success ? 'win' : 'miss')
     setResult({ stopped, success })
     setElapsed(stopped)
 

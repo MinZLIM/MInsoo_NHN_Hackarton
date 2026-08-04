@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { toast } from '@/store/useToastStore'
 import { formatGold } from '@/lib/constants'
 import { TierBadge } from '@/pages/Rank'
+import { MuteButton } from '@/components/ui/MuteButton'
 import sceneLarge from '@/assets/lobby-scene.webp'
 import sceneSmall from '@/assets/lobby-scene-sm.webp'
 
@@ -88,6 +89,7 @@ export function Lobby() {
         <h1 className="arcade__title">🧸 웹 기반 인형뽑기 게임</h1>
 
         <div className="arcade__status">
+          <MuteButton />
           <span className="gold-badge">
             <span className="gold-badge__icon" aria-hidden>
               🪙

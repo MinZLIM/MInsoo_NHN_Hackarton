@@ -36,14 +36,11 @@ export const LARGE_START_SEC = 1
 export const LARGE_TOLERANCE_SEC = 0.15
 
 /**
- * 모드별 난이도 파라미터 (F2-9). 난이도 하/중/상에 대응한다.
- * 값을 바꾸면 체감 난이도가 크게 달라지므로 플레이해 보고 조정한다.
+ * 모드별 난이도 값은 각 게임 쪽에 모여 있다. (F2-9)
+ *   소형 — src/game/three/layout.ts 의 CLAW (grabRadius / grabChance / slipPerSec)
+ *   중형 — 같은 파일의 CLIP (toleranceRad / spinSpeed)
+ *   대형 — 이 파일의 LARGE_TOLERANCE_SEC
  */
-export const GRAB_SUCCESS_RATE: Record<GameMode, number> = {
-  small: 0.75,
-  medium: 0.45,
-  large: 1, // 대형은 타이밍으로만 판정한다
-}
 
 export const SIZE_LABEL: Record<DollSize, string> = {
   small: '소형',

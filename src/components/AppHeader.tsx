@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
 import { GoldBadge } from './GoldBadge'
+import { MuteButton } from './ui/MuteButton'
 import { Button } from './ui/Button'
 
 interface Props {
@@ -25,6 +26,7 @@ export function AppHeader({ title, showBack = true }: Props) {
       </div>
 
       <div className="app-header__right">
+        <MuteButton />
         <GoldBadge />
         {showBack ? null : (
           <Button

@@ -5,6 +5,7 @@ import { ClipScene, type ClipPhase, type ClipSceneHandle } from '@/game/three/Cl
 import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 import { dollEmoji } from '@/lib/assets'
+import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 
 interface Props {
   /** 60초 종료 시 획득 개수를 넘긴다 */
@@ -34,11 +35,20 @@ export function ClipStage({ onEnd }: Props) {
   }, [])
 
   const onVerdict = useCallback((hit: boolean) => {
+    playSfx(hit ? 'win' : 'miss')
     setFlash(hit ? 'hit' : 'miss')
     setTimeout(() => setFlash(null), FLASH_MS)
   }, [])
 
-  const press = () => handleRef.current?.press()
+  const press = () => {
+    playSfx('click')
+    handleRef.current?.press()
+  }
+
+  useEffect(() => {
+    startBgm()
+    return stopBgm
+  }, [])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

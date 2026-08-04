@@ -34,7 +34,6 @@ export interface ClawSceneHandle {
 interface Props {
   emojis: string[]
   control: ClawControl
-  grabSuccessRate: number
   onCatch: (total: number) => void
   onPhaseChange: (phase: ClawPhase) => void
   /** 조작 핸들을 바깥(HUD 버튼)으로 넘긴다 */
@@ -58,7 +57,6 @@ export function ClawScene(props: Props) {
 function SceneContent({
   emojis,
   control,
-  grabSuccessRate,
   onCatch,
   onPhaseChange,
   onReady,
@@ -184,7 +182,7 @@ function SceneContent({
 
       case 'grab': {
         const target = nearestDoll()
-        if (target !== null && Math.random() < grabSuccessRate) {
+        if (target !== null && Math.random() < CLAW.grabChance) {
           heldIndex.current = target
           // 잡은 인형은 물리 대신 집게를 따라오게 한다
           dollRefs.current[target]?.setBodyType(2, true)

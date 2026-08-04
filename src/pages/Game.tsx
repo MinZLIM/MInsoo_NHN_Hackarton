@@ -20,6 +20,7 @@ import {
   formatGold,
 } from '@/lib/constants'
 import { messageOf, type FinishGameResult, type GameMode } from '@/types/api'
+import { playSfx } from '@/lib/sfx'
 
 /**
  * 게임 공용 프레임 (F2-1).
@@ -58,6 +59,7 @@ export function Game() {
 
   const start = async () => {
     setStarting(true)
+    playSfx('coin')
     try {
       const started = await api.startGame(mode)
       setSessionId(started.session_id)

@@ -1047,6 +1047,33 @@ p {
 }
 
 
+/* 소리 토글 */
+.mute-btn {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.mute-btn:hover {
+  border-color: var(--border-hi);
+  background: var(--surface-hi);
+}
+.mute-btn:active {
+  transform: scale(0.94);
+}
+.arcade__status .mute-btn {
+  background: rgba(12, 9, 26, 0.6);
+  border-color: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+}
+
 /* ---------- 아케이드 조작반 (소형) ---------- */
 .panel {
   display: flex;
