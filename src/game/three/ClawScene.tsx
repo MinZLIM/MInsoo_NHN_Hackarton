@@ -20,7 +20,8 @@ export type ClawPhase = 'aim' | 'descend' | 'grab' | 'ascend' | 'carry' | 'relea
 export type ClawControl = 'manual' | 'swing'
 
 export interface ClawSceneHandle {
-  move: (x: -1 | 0 | 1, z: -1 | 0 | 1) => void
+  /** 조이스틱 입력. 각 축 -1 ~ 1 (아날로그) */
+  move: (x: number, z: number) => void
   drop: () => void
 }
 
@@ -64,7 +65,7 @@ function SceneContent({
   // 렌더를 유발하지 않도록 진행 상태는 전부 ref에 둔다. 화면 갱신은 phase 변화 시에만.
   const phase = useRef<ClawPhase>('aim')
   const pos = useRef({ x: 0, y: CLAW.topY, z: 0 })
-  const input = useRef({ x: 0 as -1 | 0 | 1, z: 0 as -1 | 0 | 1 })
+  const input = useRef({ x: 0, z: 0 })
   const swingDir = useRef<1 | -1>(1)
   const heldIndex = useRef<number | null>(null)
   const caught = useRef(0)

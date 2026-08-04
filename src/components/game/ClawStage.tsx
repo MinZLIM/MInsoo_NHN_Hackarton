@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Button } from '@/components/ui/Button'
+import { Joystick } from '@/components/game/Joystick'
 import { ClawScene, type ClawPhase, type ClawSceneHandle } from '@/game/three/ClawScene'
 import { GRAB_SUCCESS_RATE, SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
@@ -33,7 +33,7 @@ export function ClawStage({ onEnd }: Props) {
     handleRef.current = handle
   }, [])
 
-  const move = (x: -1 | 0 | 1, z: -1 | 0 | 1) => handleRef.current?.move(x, z)
+  const move = (x: number, z: number) => handleRef.current?.move(x, z)
   const drop = () => handleRef.current?.drop()
 
   useEffect(() => {
@@ -110,53 +110,24 @@ export function ClawStage({ onEnd }: Props) {
         </Canvas>
       </div>
 
-      <div className="stage__controls">
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onPointerDown={() => move(-1, 0)}
-          onPointerUp={() => move(0, 0)}
-          onPointerLeave={() => move(0, 0)}
-        >
-          ◀
-        </Button>
+      {/* 아케이드 조작반 — 조이스틱으로 옮기고 빨간 버튼으로 내린다 */}
+      <div className="panel">
+        <Joystick disabled={busy} onChange={move} />
 
-        <Button
-          variant="ghost"
+        <button
+          className="arcade-btn"
           disabled={busy}
-          onPointerDown={() => move(0, -1)}
-          onPointerUp={() => move(0, 0)}
-          onPointerLeave={() => move(0, 0)}
+          onClick={drop}
+          aria-label="집게 내리기"
+          title="집게 내리기"
         >
-          ▲ 안쪽
-        </Button>
-
-        <Button disabled={busy} onClick={drop}>
-          집게 내리기
-        </Button>
-
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onPointerDown={() => move(0, 1)}
-          onPointerUp={() => move(0, 0)}
-          onPointerLeave={() => move(0, 0)}
-        >
-          ▼ 앞쪽
-        </Button>
-
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onPointerDown={() => move(1, 0)}
-          onPointerUp={() => move(0, 0)}
-          onPointerLeave={() => move(0, 0)}
-        >
-          ▶
-        </Button>
+          <span className="arcade-btn__face" aria-hidden />
+        </button>
       </div>
 
-      <p className="stage__hint">← → ↑ ↓ 로 집게를 옮기고 Space 로 내립니다.</p>
+      <p className="stage__hint">
+        조이스틱으로 집게를 옮기고 빨간 버튼으로 내립니다. (키보드 ← → ↑ ↓ / Space)
+      </p>
     </div>
   )
 }

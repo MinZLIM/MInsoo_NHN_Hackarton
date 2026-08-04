@@ -1046,6 +1046,162 @@ p {
   gap: 10px;
 }
 
+
+/* ---------- 아케이드 조작반 (소형) ---------- */
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 6vw, 64px);
+  padding: 16px clamp(20px, 5vw, 40px);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border-hi);
+  background: linear-gradient(180deg, #2a2450 0%, #1a1636 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    var(--shadow-md);
+}
+
+/* 조이스틱 */
+.joystick {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  flex: none;
+  border-radius: 50%;
+  touch-action: none;
+  cursor: grab;
+  /* 조작판에 박힌 금속 링 */
+  background:
+    radial-gradient(circle at 50% 38%, #3a3466 0%, #221d44 62%, #171331 100%);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.65),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.06),
+    0 2px 0 rgba(255, 255, 255, 0.05);
+}
+.joystick.is-active {
+  cursor: grabbing;
+}
+.joystick.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 스틱이 드나드는 구멍 */
+.joystick__gate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #0d0a1c, #05040e);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* 스틱 봉 */
+.joystick__shaft {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 34px;
+  margin: -30px 0 0 -8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #7a749e, #cdc8e8 45%, #6f6992);
+  transition: transform 0.06s linear;
+}
+
+/* 손잡이 공 */
+.joystick__ball {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -46px 0 0 -27px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, #ff8fa4 0%, #ef4b6b 42%, #b3243f 100%);
+  box-shadow:
+    inset 0 -4px 10px rgba(0, 0, 0, 0.4),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+  transition: transform 0.06s linear;
+}
+.joystick.is-active .joystick__ball,
+.joystick.is-active .joystick__shaft {
+  transition: none;
+}
+
+/* 동그란 누름 버튼 */
+.arcade-btn {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  /* 버튼이 박힌 베젤 */
+  background: radial-gradient(circle at 50% 40%, #3a3466, #1b1739);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.6),
+    0 2px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 0.08s var(--ease);
+}
+.arcade-btn__face {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 70px;
+  transform: translate(-50%, -54%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 28%, #ff9db0 0%, #f2415f 45%, #b81f3c 100%);
+  box-shadow:
+    inset 0 -5px 12px rgba(0, 0, 0, 0.35),
+    inset 0 4px 10px rgba(255, 255, 255, 0.25),
+    0 6px 0 #7d1428,
+    0 10px 20px rgba(0, 0, 0, 0.55);
+  transition: transform 0.08s var(--ease), box-shadow 0.08s var(--ease);
+}
+.arcade-btn:hover:not(:disabled) .arcade-btn__face {
+  transform: translate(-50%, -58%);
+}
+.arcade-btn:active:not(:disabled) .arcade-btn__face {
+  transform: translate(-50%, -46%);
+  box-shadow:
+    inset 0 -3px 10px rgba(0, 0, 0, 0.4),
+    0 2px 0 #7d1428,
+    0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.arcade-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.arcade-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .joystick {
+    width: 96px;
+    height: 96px;
+  }
+  .arcade-btn {
+    width: 82px;
+    height: 82px;
+  }
+  .arcade-btn__face {
+    width: 62px;
+    height: 62px;
+  }
+}
+
 /* 판정 플래시 */
 .stage__flash {
   position: absolute;
