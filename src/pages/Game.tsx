@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
 import { ClawStage } from '@/components/game/ClawStage'
+import { ClipStage } from '@/components/game/ClipStage'
 import { TimingStage } from '@/components/game/TimingStage'
 import { DollImage } from '@/components/DollImage'
 import { Button } from '@/components/ui/Button'
@@ -29,7 +30,7 @@ type Step = 'select' | 'confirm' | 'playing' | 'settling' | 'result'
 
 const MODES: { mode: GameMode; icon: string; rule: string }[] = [
   { mode: 'small', icon: '🧸', rule: '60초 타임어택 · 집게 직접 조작' },
-  { mode: 'medium', icon: '🐻', rule: '60초 타임어택 · 자동 왕복 집게' },
+  { mode: 'medium', icon: '🐻', rule: '60초 타임어택 · 회전 빨래집게' },
   { mode: 'large', icon: '🐉', rule: '20.00초 타이밍 클릭 (1회성)' },
 ]
 
@@ -125,8 +126,10 @@ export function Game() {
       {step === 'playing' ? (
         mode === 'large' ? (
           <TimingStage onEnd={onGameEnd} />
+        ) : mode === 'medium' ? (
+          <ClipStage onEnd={onGameEnd} />
         ) : (
-          <ClawStage mode={mode} onEnd={onGameEnd} />
+          <ClawStage onEnd={onGameEnd} />
         )
       ) : null}
 

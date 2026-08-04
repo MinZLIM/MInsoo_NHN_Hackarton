@@ -8,8 +8,6 @@ import { dollEmoji } from '@/lib/assets'
 import type { DollSize } from '@/types/api'
 
 interface Props {
-  /** 소형은 직접 조준, 중형은 자동 왕복하는 집게의 타이밍을 맞춘다 */
-  mode: Extract<DollSize, 'small' | 'medium'>
   /** 60초 종료 시 획득 개수를 넘긴다 */
   onEnd: (caught: number) => void
 }
@@ -17,8 +15,8 @@ interface Props {
 const emojisOf = (size: DollSize) =>
   MOCK_DOLLS.filter((d) => d.size === size).map((d) => dollEmoji(d.image_path))
 
-/** 소형·중형 인형뽑기 3D 스테이지 (F2-2, F2-3, F2-8) */
-export function ClawStage({ mode, onEnd }: Props) {
+/** 소형 인형뽑기 3D 스테이지 — 집게를 직접 조준한다 (F2-2, F2-3) */
+export function ClawStage({ onEnd }: Props) {
   const handleRef = useRef<ClawSceneHandle | null>(null)
   const onEndRef = useRef(onEnd)
   onEndRef.current = onEnd
@@ -31,8 +29,6 @@ export function ClawStage({ mode, onEnd }: Props) {
   const caughtRef = useRef(0)
   caughtRef.current = caught
 
-  const swing = mode === 'medium'
-
   const onReady = useCallback((handle: ClawSceneHandle) => {
     handleRef.current = handle
   }, [])
@@ -42,8 +38,8 @@ export function ClawStage({ mode, onEnd }: Props) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && !swing) move(-1, 0)
-      else if (e.key === 'ArrowRight' && !swing) move(1, 0)
+      if (e.key === 'ArrowLeft') move(-1, 0)
+      else if (e.key === 'ArrowRight') move(1, 0)
       else if (e.key === 'ArrowUp') move(0, -1)
       else if (e.key === 'ArrowDown') move(0, 1)
       else if (e.key === ' ' || e.key === 'Enter') {
@@ -60,7 +56,7 @@ export function ClawStage({ mode, onEnd }: Props) {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [swing])
+  }, [])
 
   // 60초 타임어택
   useEffect(() => {
@@ -104,9 +100,9 @@ export function ClawStage({ mode, onEnd }: Props) {
           <color attach="background" args={['#151230']} />
           <fog attach="fog" args={['#151230', 16, 30]} />
           <ClawScene
-            emojis={emojisOf(mode)}
-            control={swing ? 'swing' : 'manual'}
-            grabSuccessRate={GRAB_SUCCESS_RATE[mode]}
+            emojis={emojisOf('small')}
+            control="manual"
+            grabSuccessRate={GRAB_SUCCESS_RATE.small}
             onCatch={setCaught}
             onPhaseChange={setPhase}
             onReady={onReady}
@@ -115,17 +111,15 @@ export function ClawStage({ mode, onEnd }: Props) {
       </div>
 
       <div className="stage__controls">
-        {swing ? null : (
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onPointerDown={() => move(-1, 0)}
-            onPointerUp={() => move(0, 0)}
-            onPointerLeave={() => move(0, 0)}
-          >
-            ◀
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onPointerDown={() => move(-1, 0)}
+          onPointerUp={() => move(0, 0)}
+          onPointerLeave={() => move(0, 0)}
+        >
+          ◀
+        </Button>
 
         <Button
           variant="ghost"
@@ -151,24 +145,18 @@ export function ClawStage({ mode, onEnd }: Props) {
           ▼ 앞쪽
         </Button>
 
-        {swing ? null : (
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onPointerDown={() => move(1, 0)}
-            onPointerUp={() => move(0, 0)}
-            onPointerLeave={() => move(0, 0)}
-          >
-            ▶
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onPointerDown={() => move(1, 0)}
+          onPointerUp={() => move(0, 0)}
+          onPointerLeave={() => move(0, 0)}
+        >
+          ▶
+        </Button>
       </div>
 
-      <p className="stage__hint">
-        {swing
-          ? '집게가 좌우로 움직입니다. ↑↓ 로 깊이를 맞추고 Space 로 내리세요.'
-          : '← → ↑ ↓ 로 집게를 옮기고 Space 로 내립니다.'}
-      </p>
+      <p className="stage__hint">← → ↑ ↓ 로 집게를 옮기고 Space 로 내립니다.</p>
     </div>
   )
 }

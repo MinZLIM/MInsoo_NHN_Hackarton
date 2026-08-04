@@ -7,6 +7,11 @@ import { bodyColor, emojiTexture, accentColor } from './emojiTexture'
 interface Props {
   emoji: string
   position: [number, number, number]
+  /**
+   * kinematicPosition으로 두면 물리를 무시하고 코드가 위치를 정한다.
+   * 집게에 매달려 회전하는 동안 쓰고, 떨어질 때 dynamic으로 바꾼다.
+   */
+  bodyType?: 'dynamic' | 'kinematicPosition'
 }
 
 /**
@@ -20,7 +25,7 @@ interface Props {
  * 정밀 충돌은 이 게임에서 이득이 없다.
  */
 export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
-  { emoji, position },
+  { emoji, position, bodyType = 'dynamic' },
   ref,
 ) {
   const r = DOLL.radius
@@ -39,6 +44,7 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
       ref={ref}
       position={position}
       rotation={rotation}
+      type={bodyType}
       colliders="ball"
       restitution={0.08}
       friction={0.95}

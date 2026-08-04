@@ -50,3 +50,36 @@ export const DOLL = {
 
 /** 이 높이보다 아래로 내려간 인형은 투입구로 빠진 것으로 본다 */
 export const FALL_THRESHOLD = -2.2
+
+/**
+ * 중형 — 빨래집게 기계 (F2-8).
+ * 수평으로 도는 원판 가장자리에 빨래집게가 달려 있고, 각 집게가 인형을 물고 있다.
+ * 버튼을 누르면 상단 바가 내려와 그 순간 누름 위치에 온 집게를 눌러 연다.
+ */
+export const CLIP = {
+  /** 원판 중심 높이 */
+  discY: 2.34,
+  discRadius: 1.28,
+  discThickness: 0.14,
+  /** 집게가 달린 반지름 */
+  armRadius: 1.28,
+  slots: 8,
+  /** 회전 각속도 (rad/s) — 높을수록 어렵다 */
+  spinSpeed: 0.95,
+
+  /** 집게 몸통 중심 높이 */
+  clipY: 2.1,
+  /** 매달린 인형 중심 높이 */
+  dollY: 1.62,
+
+  /** 누름 바가 작동하는 각도 — 카메라 정면(+z) */
+  triggerAngle: Math.PI / 2,
+  /** 이 각도 안에 집게가 들어와 있으면 눌린다 */
+  toleranceRad: 0.19,
+
+  /** 바가 대기하는 높이(아랫면 기준)와 집게를 누르는 높이 */
+  barTopY: 3.2,
+  barPressY: 2.24,
+  barDownSpeed: 3.3,
+  barUpSpeed: 2.7,
+} as const
