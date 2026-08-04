@@ -65,7 +65,7 @@ export const CLIP = {
   armRadius: 1.28,
   slots: 8,
   /** 회전 각속도 (rad/s) — 높을수록 어렵다 */
-  spinSpeed: 0.95,
+  spinSpeed: 1.2,
 
   /** 집게 몸통 중심 높이 */
   clipY: 2.1,

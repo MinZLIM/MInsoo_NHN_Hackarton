@@ -51,7 +51,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
   const clipRefs = useRef<(Group | null)[]>([])
   const dollRefs = useRef<(RapierRigidBody | null)[]>([])
 
-  const [openClips, setOpenClips] = useState<number[]>([])
+  const [releasedIds, setReleasedIds] = useState<number[]>([])
 
   const spin = useRef(0)
   const phase = useRef<ClipPhase>('ready')
@@ -61,10 +61,19 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
 
   const slots = useMemo(
     () =>
-      Array.from({ length: CLIP.slots }, (_, i) => ({
-        baseAngle: (i / CLIP.slots) * Math.PI * 2,
-        emoji: emojis[i % emojis.length] ?? '🧸',
-      })),
+      Array.from({ length: CLIP.slots }, (_, i) => {
+        const baseAngle = (i / CLIP.slots) * Math.PI * 2
+        return {
+          baseAngle,
+          emoji: emojis[i % emojis.length] ?? '🧸',
+          // 최초 1회만 쓰는 생성 위치. 이후 위치는 useFrame이 정한다.
+          spawn: [
+            Math.cos(baseAngle) * CLIP.armRadius,
+            CLIP.dollY,
+            Math.sin(baseAngle) * CLIP.armRadius,
+          ] as [number, number, number],
+        }
+      }),
     [emojis],
   )
 
@@ -113,7 +122,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
 
     // 집게가 열리고 인형이 떨어진다 — 열린 순간 획득으로 친다
     released.current.add(target)
-    setOpenClips((prev) => [...prev, target])
+    setReleasedIds((prev) => [...prev, target])
 
     const body = dollRefs.current[target]
     body?.setBodyType(0, true)
@@ -201,19 +210,23 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
               position={[x, CLIP.clipY, z]}
               rotation={[0, -a, 0]}
             >
-              <Clothespin open={openClips.includes(i)} />
+              <Clothespin open={releasedIds.includes(i)} />
             </group>
           )
         })}
       </group>
 
-      {/* 매달린 인형 — 물리 대신 코드가 위치를 정한다 */}
+      {/*
+        매달려 있는 동안은 코드가 위치를 정하고(kinematic), 집게가 열리면 물리에 맡긴다.
+        position은 생성 시점 값으로 고정한다 — 리렌더마다 새 값을 주면
+        이미 떨어진 인형이 원래 자리로 되돌아가 잔상처럼 남는다.
+      */}
       {slots.map((slot, i) => (
         <Doll3D
           key={i}
           emoji={slot.emoji}
-          bodyType="kinematicPosition"
-          position={slotPosition(i)}
+          bodyType={releasedIds.includes(i) ? 'dynamic' : 'kinematicPosition'}
+          position={slot.spawn}
           ref={(body) => {
             dollRefs.current[i] = body
           }}
