@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/useAuthStore'
 import { GoldBadge } from './GoldBadge'
-import { MuteButton } from './ui/MuteButton'
+import { SettingsMenu } from './ui/SettingsMenu'
 import { Button } from './ui/Button'
 
 interface Props {
@@ -12,7 +11,6 @@ interface Props {
 
 export function AppHeader({ title, showBack = true }: Props) {
   const navigate = useNavigate()
-  const signOut = useAuthStore((s) => s.signOut)
 
   return (
     <header className="app-header">
@@ -25,21 +23,10 @@ export function AppHeader({ title, showBack = true }: Props) {
         <h1 className="app-header__title">{title}</h1>
       </div>
 
+      {/* 로그아웃은 환경설정 안으로 옮겼다 */}
       <div className="app-header__right">
-        <MuteButton />
         <GoldBadge />
-        {showBack ? null : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await signOut()
-              navigate('/login', { replace: true })
-            }}
-          >
-            로그아웃
-          </Button>
-        )}
+        <SettingsMenu />
       </div>
     </header>
   )

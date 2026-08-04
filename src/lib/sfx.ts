@@ -13,6 +13,14 @@ export type SfxName = 'click' | 'motor' | 'grab' | 'win' | 'miss' | 'coin' | 'ti
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let muted = false
+/** 0 ~ 1 */
+let volume = 0.85
+
+/** 음소거와 볼륨을 실제 출력에 반영한다. 뚝 끊기지 않도록 살짝 보간한다. */
+function applyGain() {
+  if (!master || !ctx) return
+  master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.02)
+}
 
 function audio() {
   if (!ctx) {
@@ -20,7 +28,7 @@ function audio() {
     if (!Ctor) return null
     ctx = new Ctor()
     master = ctx.createGain()
-    master.gain.value = muted ? 0 : 0.85
+    master.gain.value = muted ? 0 : volume
     master.connect(ctx.destination)
   }
   if (ctx.state === 'suspended') void ctx.resume()
@@ -167,11 +175,18 @@ export function stopBgm() {
 
 export function setMuted(next: boolean) {
   muted = next
-  if (master && ctx) {
-    master.gain.setTargetAtTime(next ? 0 : 0.85, ctx.currentTime, 0.02)
-  }
+  applyGain()
 }
 
 export function isMuted() {
   return muted
+}
+
+export function setVolume(next: number) {
+  volume = Math.min(1, Math.max(0, next))
+  applyGain()
+}
+
+export function getVolume() {
+  return volume
 }
