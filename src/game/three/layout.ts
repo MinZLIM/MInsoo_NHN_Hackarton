@@ -31,6 +31,20 @@ export const CLAW_BOUNDS = {
   maxZ: HALF_D - 0.4,
 }
 
+/** 집게가 매달린 갠트리 — 뒤쪽 크로스빔이 z로, 그 위 트롤리가 x로 움직인다 */
+export const GANTRY = {
+  railY: CABINET.height - 0.26,
+  beamThickness: 0.11,
+  trolleySize: 0.26,
+}
+
+/** 상단 간판 */
+export const MARQUEE = {
+  y: CABINET.height + 0.62,
+  width: CABINET.width + 0.5,
+  height: 0.86,
+}
+
 export const CLAW = {
   /** 대기 높이 */
   topY: 2.7,
@@ -41,6 +55,13 @@ export const CLAW = {
   carrySpeed: 2.2,
   /** 집게 중심에서 이 거리 안의 인형을 잡는다 */
   grabRadius: 0.46,
+  /**
+   * 실제 기계처럼 집는 힘이 약하다. 들어 올리고 옮기는 동안 초당 이 확률로 놓친다.
+   * 잡는 순간 확정되는 것보다 훨씬 조마조마하다.
+   */
+  slipPerSec: 0.32,
+  /** 집게가 열리고 닫히는 속도 (초당 보간 계수) */
+  gripSpeed: 7,
 }
 
 export const DOLL = {

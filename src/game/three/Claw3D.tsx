@@ -1,50 +1,104 @@
-import { forwardRef } from 'react'
+import { forwardRef, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { Group } from 'three'
-import { CABINET } from './layout'
+import { CLAW } from './layout'
 
 interface Props {
   /** 열린 상태면 발톱을 벌린다 */
   open: boolean
 }
 
-const CLAW_COLOR = '#e0aa3e'
+const CLAW_COLOR = '#e8b657'
+const CLAW_DARK = '#a87a2c'
 const FINGERS = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3]
 
-/** 집게. 위치는 부모 group의 ref로 매 프레임 갱신한다. */
+/**
+ * 집게 머리.
+ *
+ * 위치는 부모(ClawScene)가 매 프레임 정한다. 여기서는 두 가지만 한다.
+ *  - 발톱이 즉시 꺾이지 않고 서서히 벌어지고 오므라든다
+ *  - 옆으로 움직이면 관성으로 살짝 기운다 (실제 기계의 흔들림)
+ */
 export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
-  const spread = open ? 0.42 : 0.16
-  const tilt = open ? 0.55 : 0.12
+  const fingersRef = useRef<Group[]>([])
+  const swayRef = useRef<Group>(null)
+
+  /** 0(닫힘) ~ 1(열림) */
+  const grip = useRef(1)
+  const prev = useRef({ x: 0, z: 0 })
+  const sway = useRef({ x: 0, z: 0 })
+
+  useFrame((_, rawDelta) => {
+    const delta = Math.min(rawDelta, 1 / 30)
+    const target = open ? 1 : 0
+    grip.current += (target - grip.current) * Math.min(1, CLAW.gripSpeed * delta)
+
+    const spread = 0.16 + grip.current * 0.5
+    fingersRef.current.forEach((finger) => {
+      if (finger) finger.rotation.z = -spread
+    })
+
+    // 부모의 실제 이동량으로 흔들림을 만든다
+    const parent = (ref as React.RefObject<Group | null>)?.current
+    if (parent && swayRef.current) {
+      const vx = (parent.position.x - prev.current.x) / delta
+      const vz = (parent.position.z - prev.current.z) / delta
+      prev.current = { x: parent.position.x, z: parent.position.z }
+
+      // 속도에 비례해 기울고, 멈추면 스프링처럼 되돌아온다
+      sway.current.x += (-vz * 0.06 - sway.current.x) * Math.min(1, 6 * delta)
+      sway.current.z += (vx * 0.06 - sway.current.z) * Math.min(1, 6 * delta)
+
+      swayRef.current.rotation.x = sway.current.x
+      swayRef.current.rotation.z = sway.current.z
+    }
+  })
 
   return (
     <group ref={ref}>
-      {/* 천장까지 이어진 와이어 — 집게 위치에 맞춰 늘어난다 */}
-      <mesh position={[0, CABINET.height / 2, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, CABINET.height, 8]} />
-        <meshStandardMaterial color="#9a94c4" metalness={0.6} roughness={0.4} />
-      </mesh>
+      <group ref={swayRef}>
+        {/* 집게를 매단 고리 */}
+        <mesh position={[0, 0.2, 0]}>
+          <torusGeometry args={[0.07, 0.02, 8, 16]} />
+          <meshStandardMaterial color="#b9b3d8" metalness={0.85} roughness={0.25} />
+        </mesh>
 
-      {/* 몸통 */}
-      <mesh castShadow>
-        <cylinderGeometry args={[0.17, 0.13, 0.24, 16]} />
-        <meshStandardMaterial color={CLAW_COLOR} metalness={0.75} roughness={0.3} />
-      </mesh>
+        {/* 몸통 */}
+        <mesh castShadow>
+          <cylinderGeometry args={[0.19, 0.14, 0.26, 20]} />
+          <meshStandardMaterial color={CLAW_COLOR} metalness={0.8} roughness={0.22} />
+        </mesh>
+        {/* 몸통 띠 */}
+        <mesh position={[0, -0.1, 0]}>
+          <cylinderGeometry args={[0.16, 0.16, 0.05, 20]} />
+          <meshStandardMaterial color={CLAW_DARK} metalness={0.7} roughness={0.3} />
+        </mesh>
 
-      {/* 발톱 3개 — 벌어질수록 바깥으로 기운다 */}
-      {FINGERS.map((angle, i) => (
-        <group key={i} rotation={[0, angle, 0]}>
-          <group position={[spread * 0.5, -0.12, 0]} rotation={[0, 0, -tilt]}>
-            <mesh position={[0, -0.19, 0]} castShadow>
-              <boxGeometry args={[0.07, 0.38, 0.09]} />
-              <meshStandardMaterial color={CLAW_COLOR} metalness={0.7} roughness={0.28} />
-            </mesh>
-            {/* 발톱 끝 */}
-            <mesh position={[0, -0.4, 0.02]} rotation={[0.5, 0, 0]} castShadow>
-              <boxGeometry args={[0.07, 0.14, 0.08]} />
-              <meshStandardMaterial color="#f2c96a" metalness={0.7} roughness={0.28} />
-            </mesh>
+        {/* 발톱 3개 — 관절이 있어 두 마디로 접힌다 */}
+        {FINGERS.map((angle, i) => (
+          <group key={i} rotation={[0, angle, 0]}>
+            <group
+              ref={(g) => {
+                if (g) fingersRef.current[i] = g
+              }}
+              position={[0.09, -0.11, 0]}
+            >
+              {/* 윗마디 */}
+              <mesh position={[0, -0.16, 0]} castShadow>
+                <boxGeometry args={[0.075, 0.34, 0.09]} />
+                <meshStandardMaterial color={CLAW_COLOR} metalness={0.75} roughness={0.24} />
+              </mesh>
+              {/* 아랫마디 — 안쪽으로 꺾인다 */}
+              <group position={[0, -0.33, 0]} rotation={[0, 0, 0.75]}>
+                <mesh position={[0, -0.1, 0]} castShadow>
+                  <boxGeometry args={[0.07, 0.22, 0.085]} />
+                  <meshStandardMaterial color={CLAW_DARK} metalness={0.75} roughness={0.24} />
+                </mesh>
+              </group>
+            </group>
           </group>
-        </group>
-      ))}
+        ))}
+      </group>
     </group>
   )
 })

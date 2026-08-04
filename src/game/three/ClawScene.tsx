@@ -5,15 +5,21 @@ import { Group } from 'three'
 import { Cabinet } from './Cabinet'
 import { Doll3D } from './Doll3D'
 import { Claw3D } from './Claw3D'
+import { Gantry, PrizeDoor } from './Gantry'
+import { marqueeTexture } from './signTexture'
 import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 import {
+  CABINET,
   CLAW,
   CLAW_BOUNDS,
   DOLL,
   FALL_THRESHOLD,
+  GANTRY,
   HALF_D,
+  HALF_W,
   HOLE_CENTER_X,
   HOLE,
+  MARQUEE,
 } from './layout'
 
 export type ClawPhase = 'aim' | 'descend' | 'grab' | 'ascend' | 'carry' | 'release'
@@ -58,6 +64,9 @@ function SceneContent({
   onReady,
 }: Props) {
   const clawRef = useRef<Group>(null)
+  const beamRef = useRef<Group>(null)
+  const trolleyRef = useRef<Group>(null)
+  const wireRef = useRef<Group>(null)
   const dollRefs = useRef<(RapierRigidBody | null)[]>([])
 
   const [open, setOpen] = useState(true)
@@ -185,6 +194,10 @@ function SceneContent({
       }
 
       case 'ascend': {
+        if (heldIndex.current !== null && Math.random() < CLAW.slipPerSec * delta) {
+          dollRefs.current[heldIndex.current]?.setBodyType(0, true)
+          heldIndex.current = null
+        }
         p.y += CLAW.speedY * delta
         if (p.y >= CLAW.topY) {
           p.y = CLAW.topY
@@ -194,6 +207,15 @@ function SceneContent({
       }
 
       case 'carry': {
+        // 실제 기계처럼 옮기는 도중에 놓칠 수 있다
+        if (heldIndex.current !== null && Math.random() < CLAW.slipPerSec * delta) {
+          const idx = heldIndex.current
+          dollRefs.current[idx]?.setBodyType(0, true)
+          heldIndex.current = null
+          setPhase('aim')
+          break
+        }
+
         const dx = HOLE_CENTER_X - p.x
         const dz = 0 - p.z
         const dist = Math.hypot(dx, dz)
@@ -235,6 +257,15 @@ function SceneContent({
 
     if (clawRef.current) clawRef.current.position.set(p.x, p.y, p.z)
 
+    // 크로스빔은 앞뒤로, 트롤리는 좌우로, 와이어는 그 사이를 잇는다
+    if (beamRef.current) beamRef.current.position.z = p.z
+    if (trolleyRef.current) trolleyRef.current.position.set(p.x, 0, p.z)
+    if (wireRef.current) {
+      const len = Math.max(0.02, GANTRY.railY - 0.13 - p.y)
+      wireRef.current.position.set(p.x, p.y + len / 2, p.z)
+      wireRef.current.scale.y = len
+    }
+
     // 투입구로 빠진 인형을 획득 처리
     dollRefs.current.forEach((body, i) => {
       if (!body || collected.current.has(i)) return
@@ -262,7 +293,37 @@ function SceneContent({
         />
       ))}
 
+      <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
       <Claw3D ref={clawRef} open={open} />
+      <PrizeDoor x={HOLE_CENTER_X} />
+
+      {/* 상단 간판 */}
+      <mesh position={[0, MARQUEE.y, HALF_D * 0.2]}>
+        <boxGeometry args={[MARQUEE.width, MARQUEE.height, 0.14]} />
+        <meshStandardMaterial color="#241c4a" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, MARQUEE.y, HALF_D * 0.2 + 0.08]}>
+        <planeGeometry args={[MARQUEE.width - 0.12, MARQUEE.height - 0.1]} />
+        <meshBasicMaterial map={marqueeTexture()} toneMapped={false} />
+      </mesh>
+      {/* 간판을 비추는 빛 */}
+      <pointLight
+        position={[0, MARQUEE.y - 0.5, HALF_D * 0.2 + 0.9]}
+        intensity={14}
+        color="#ff9ae0"
+        distance={5}
+      />
+
+      {/* 천장 안쪽 조명 라인 */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          position={[side * (HALF_W * 0.55), CABINET.height - 0.06, 0]}
+        >
+          <boxGeometry args={[0.09, 0.03, CABINET.depth * 0.86]} />
+          <meshBasicMaterial color="#dff0ff" />
+        </mesh>
+      ))}
       <PostFx bloom={0.65} />
     </>
   )

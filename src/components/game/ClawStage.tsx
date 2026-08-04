@@ -92,10 +92,10 @@ export function ClawStage({ onEnd }: Props) {
         <Canvas
           shadows
           dpr={[1, 2]}
-          camera={{ position: [0, 2.5, 5.8], fov: 46 }}
+          camera={{ position: [0, 3.1, 7.5], fov: 45 }}
           gl={{ antialias: true }}
           // 기본 카메라는 원점을 보므로 기계 중앙 높이로 시선을 올린다
-          onCreated={({ camera }) => camera.lookAt(0, 1.0, 0)}
+          onCreated={({ camera }) => camera.lookAt(0, 1.95, 0)}
         >
           <color attach="background" args={['#151230']} />
           <fog attach="fog" args={['#151230', 16, 30]} />
