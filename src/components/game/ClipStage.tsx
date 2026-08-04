@@ -114,8 +114,8 @@ export function ClipStage({ onEnd }: Props) {
       </div>
 
       <p className="stage__hint">
-        집게가 <strong>노란 원</strong>에 오는 순간에 맞춰 누르세요. 바가 내려오는 시간이 있으니
-        조금 일찍 누르는 게 좋습니다. (Space)
+        집게가 <strong>노란 원</strong>에 오는 순간에 맞춰 누르세요. 바가 내려오는 시간이 있어
+        조금 일찍 눌러야 하고, <strong>회전 속도가 계속 미세하게 변합니다</strong>. (Space)
       </p>
     </div>
   )

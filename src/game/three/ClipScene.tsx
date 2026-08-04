@@ -56,6 +56,10 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
   const [dispensedIds, setDispensedIds] = useState<number[]>([])
 
   const spin = useRef(0)
+  /** 현재 각속도와 각가속도 — 속도가 기준값 주위에서 계속 흔들린다 */
+  const spinSpeed = useRef<number>(CLIP.spinSpeed)
+  const spinAccel = useRef(0)
+  const accelTimer = useRef(0)
   const phase = useRef<ClipPhase>('ready')
   const barY = useRef<number>(CLIP.barTopY)
   const released = useRef(new Set<number>())
@@ -148,7 +152,28 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 1 / 30)
 
-    spin.current += CLIP.spinSpeed * delta
+    // 각가속도를 주기적으로 새로 뽑아 회전 속도를 흔든다
+    accelTimer.current -= delta
+    if (accelTimer.current <= 0) {
+      spinAccel.current = (Math.random() * 2 - 1) * CLIP.spinAccelMax
+      accelTimer.current =
+        CLIP.accelChangeMin + Math.random() * (CLIP.accelChangeMax - CLIP.accelChangeMin)
+    }
+
+    spinSpeed.current += spinAccel.current * delta
+
+    // 기준 속도에서 너무 멀어지면 되돌린다
+    const fastest = CLIP.spinSpeed + CLIP.spinSpeedRange
+    const slowest = CLIP.spinSpeed - CLIP.spinSpeedRange
+    if (spinSpeed.current > fastest) {
+      spinSpeed.current = fastest
+      spinAccel.current = -Math.abs(spinAccel.current)
+    } else if (spinSpeed.current < slowest) {
+      spinSpeed.current = slowest
+      spinAccel.current = Math.abs(spinAccel.current)
+    }
+
+    spin.current += spinSpeed.current * delta
     if (carouselRef.current) carouselRef.current.rotation.y = spin.current
 
     // 아직 매달려 있는 인형은 집게를 따라 돈다
