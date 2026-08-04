@@ -21,7 +21,7 @@ export function Cabinet() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[floorCenterX, -t / 2, 0]} receiveShadow>
           <boxGeometry args={[floorWidth, t, CABINET.depth]} />
-          <meshStandardMaterial color="#2c2750" roughness={0.85} />
+          <meshStandardMaterial color="#332c5e" roughness={0.55} metalness={0.15} />
         </mesh>
       </RigidBody>
 
@@ -47,13 +47,29 @@ export function Cabinet() {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[-HALF_W - t / 2, CABINET.height / 2, 0]}>
           <boxGeometry args={[t, CABINET.height, CABINET.depth]} />
-          <meshStandardMaterial color={FRAME_COLOR} transparent opacity={0.25} />
+          <meshPhysicalMaterial
+            color={GLASS_COLOR}
+            transparent
+            opacity={0.12}
+            roughness={0.06}
+            metalness={0}
+            clearcoat={1}
+            clearcoatRoughness={0.05}
+          />
         </mesh>
       </RigidBody>
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[HALF_W + t / 2, CABINET.height / 2, 0]}>
           <boxGeometry args={[t, CABINET.height, CABINET.depth]} />
-          <meshStandardMaterial color={FRAME_COLOR} transparent opacity={0.25} />
+          <meshPhysicalMaterial
+            color={GLASS_COLOR}
+            transparent
+            opacity={0.12}
+            roughness={0.06}
+            metalness={0}
+            clearcoat={1}
+            clearcoatRoughness={0.05}
+          />
         </mesh>
       </RigidBody>
       <RigidBody type="fixed" colliders="cuboid">
@@ -70,9 +86,11 @@ export function Cabinet() {
           <meshPhysicalMaterial
             color={GLASS_COLOR}
             transparent
-            opacity={0.08}
-            roughness={0.05}
+            opacity={0.1}
+            roughness={0.04}
             metalness={0}
+            clearcoat={1}
+            clearcoatRoughness={0.03}
           />
         </mesh>
       </RigidBody>
@@ -80,7 +98,7 @@ export function Cabinet() {
       {/* 천장 레일 — 집게가 매달린 곳 */}
       <mesh position={[0, CABINET.height, 0]}>
         <boxGeometry args={[CABINET.width + t * 2, t, CABINET.depth + t * 2]} />
-        <meshStandardMaterial color={FRAME_COLOR} roughness={0.5} />
+        <meshStandardMaterial color={FRAME_COLOR} roughness={0.28} metalness={0.7} />
       </mesh>
 
       {/* 모서리 기둥 4개 */}
@@ -92,7 +110,7 @@ export function Cabinet() {
       ].map(([x, z]) => (
         <mesh key={`${x}-${z}`} position={[x, CABINET.height / 2, z]}>
           <boxGeometry args={[0.1, CABINET.height, 0.1]} />
-          <meshStandardMaterial color="#7c5cff" roughness={0.4} metalness={0.3} />
+          <meshStandardMaterial color="#8b6bff" roughness={0.22} metalness={0.85} />
         </mesh>
       ))}
     </>

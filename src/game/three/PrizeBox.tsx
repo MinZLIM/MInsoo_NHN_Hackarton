@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Billboard } from '@react-three/drei'
 import { Group, Mesh } from 'three'
 import { emojiTexture } from './emojiTexture'
+import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 
 interface Props {
   /** null이면 아직 진행 중, true/false면 판정 완료 */
@@ -45,11 +46,11 @@ export function PrizeBox({ result, prizeEmoji }: Props) {
 
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[3, 5, 4]} intensity={1.6} castShadow />
+      <SceneLighting />
+      <GroundShadows y={-0.62} scale={5} />
       <pointLight
         position={[0, 2, 2]}
-        intensity={result === true ? 24 : 8}
+        intensity={result === true ? 34 : 10}
         color={result === true ? '#e0aa3e' : '#7c5cff'}
         distance={9}
       />
@@ -103,6 +104,7 @@ export function PrizeBox({ result, prizeEmoji }: Props) {
           </Billboard>
         </group>
       </group>
+      <PostFx bloom={result === true ? 1.15 : 0.55} />
     </>
   )
 }

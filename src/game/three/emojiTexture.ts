@@ -31,10 +31,18 @@ export function emojiTexture(emoji: string): THREE.CanvasTexture {
   return texture
 }
 
-/** 인형 몸통 색 — 이모지 문자열을 해시해 종류마다 일관된 색을 준다 */
-export function bodyColor(emoji: string): string {
+function hashOf(emoji: string) {
   let hash = 0
   for (let i = 0; i < emoji.length; i++) hash = (hash * 31 + emoji.charCodeAt(i)) >>> 0
-  const hue = hash % 360
-  return `hsl(${hue}, 62%, 68%)`
+  return hash
+}
+
+/** 인형 몸통 색 — 이모지를 해시해 종류마다 일관된 색을 준다 */
+export function bodyColor(emoji: string): string {
+  return `hsl(${hashOf(emoji) % 360}, 74%, 66%)`
+}
+
+/** 귀·주둥이·발바닥에 쓰는 밝은 포인트 색 */
+export function accentColor(emoji: string): string {
+  return `hsl(${(hashOf(emoji) + 24) % 360}, 68%, 84%)`
 }

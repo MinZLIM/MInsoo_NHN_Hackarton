@@ -5,6 +5,7 @@ import { Group } from 'three'
 import { Cabinet } from './Cabinet'
 import { Doll3D } from './Doll3D'
 import { Claw3D } from './Claw3D'
+import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 import {
   CLAW,
   CLAW_BOUNDS,
@@ -245,17 +246,9 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={['#b7a9ff', '#241f42', 0.6]} />
-      <directionalLight
-        position={[3.5, 6, 4]}
-        intensity={1.5}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-      />
-      <pointLight position={[-2, 2.5, 1.5]} intensity={12} color="#7c5cff" distance={8} />
-
+      <SceneLighting />
       <Cabinet />
+      <GroundShadows y={0.015} scale={8} />
 
       {dolls.map((doll, i) => (
         <Doll3D
@@ -269,6 +262,7 @@ function SceneContent({
       ))}
 
       <Claw3D ref={clawRef} open={open} />
+      <PostFx bloom={0.65} />
     </>
   )
 }
