@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Physics, type RapierRigidBody } from '@react-three/rapier'
-import { Group } from 'three'
+import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier'
+import { Group, Quaternion, Vector3 } from 'three'
 import { Cabinet } from './Cabinet'
 import { Doll3D } from './Doll3D'
 import { Claw3D } from './Claw3D'
@@ -22,7 +22,7 @@ import {
   MARQUEE,
 } from './layout'
 
-export type ClawPhase = 'aim' | 'descend' | 'grab' | 'ascend' | 'carry' | 'release'
+export type ClawPhase = 'aim' | 'descend' | 'grip' | 'ascend' | 'carry' | 'release'
 export type ClawControl = 'manual' | 'swing'
 
 export interface ClawSceneHandle {
@@ -62,7 +62,10 @@ function SceneContent({
   onPhaseChange,
   onReady,
 }: Props) {
+  const { world, rapier } = useRapier()
   const clawRef = useRef<Group>(null)
+  /** 집게 본체 — 인형과 조인트로 연결하려면 강체가 필요하다 */
+  const clawBodyRef = useRef<RapierRigidBody>(null)
   const beamRef = useRef<Group>(null)
   const trolleyRef = useRef<Group>(null)
   const wireRef = useRef<Group>(null)
@@ -76,6 +79,14 @@ function SceneContent({
   const input = useRef({ x: 0, z: 0 })
   const swingDir = useRef<1 | -1>(1)
   const heldIndex = useRef<number | null>(null)
+  /** 집게와 인형을 잇는 조인트. 이게 있는 동안 인형은 물리로 매달린다. */
+  const jointRef = useRef<ReturnType<typeof world.createImpulseJoint> | null>(null)
+  /** 이번에 잡은 집게가 버틸 수 있는 토크 — 잡을 때마다 조금씩 다르다 */
+  const gripTorque = useRef(CLAW.gripTorque)
+  /** 발톱이 오므라드는 데 남은 시간 */
+  const gripTimer = useRef(0)
+  /** 문 직후 미끄럼 판정을 미루는 시간 */
+  const graceTimer = useRef(0)
   const caught = useRef(0)
   const collected = useRef(new Set<number>())
 
@@ -121,6 +132,93 @@ function SceneContent({
     // onReady는 부모에서 고정된 함수를 넘긴다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /**
+   * 집게가 인형을 문다.
+   *
+   * 인형을 강제로 집게 위치에 붙이지 않고, 발톱이 닿은 지점에 구면 조인트를 건다.
+   * 그러면 인형은 잡힌 지점을 축으로 매달려 흔들리고, 무게중심이 아래로 내려오려
+   * 회전한다. 다리 끝을 물면 크게 돌아가고, 몸통을 물면 얌전히 매달린다.
+   */
+  const attach = (index: number) => {
+    const doll = dollRefs.current[index]
+    const claw = clawBodyRef.current
+    if (!doll || !claw) return false
+
+    const clawPos = claw.translation()
+    const dollPos = doll.translation()
+
+    // 발톱 끝이 닿은 지점 — 집게에서 인형 쪽으로 인형 반지름만큼 들어간 곳
+    const toDoll = new Vector3(
+      dollPos.x - clawPos.x,
+      dollPos.y - clawPos.y,
+      dollPos.z - clawPos.z,
+    )
+    const dist = Math.max(toDoll.length(), 0.001)
+    const grabWorld = new Vector3(clawPos.x, clawPos.y, clawPos.z).addScaledVector(
+      toDoll.clone().normalize(),
+      Math.min(dist, DOLL.radius * 0.9),
+    )
+
+    /*
+     * 집게 쪽 앵커는 집게 중심이다. 그래야 인형이 집게 바로 아래로 끌려와 매달린다.
+     * 인형 쪽 앵커는 실제로 물린 지점이라, 다리를 물면 인형이 뒤집히며 몸통이
+     * 그 아래로 돌아 내려온다 — 실제 인형뽑기에서 보는 그 움직임이다.
+     */
+    const anchorClaw = new Vector3(0, 0, 0)
+
+    const r = doll.rotation()
+    const anchorDoll = grabWorld
+      .clone()
+      .sub(new Vector3(dollPos.x, dollPos.y, dollPos.z))
+      .applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w).invert())
+
+    jointRef.current = world.createImpulseJoint(
+      rapier.JointData.spherical(anchorClaw, anchorDoll),
+      claw,
+      doll,
+      true,
+    )
+
+    heldIndex.current = index
+    graceTimer.current = CLAW.gripGraceSec
+    gripTorque.current =
+      CLAW.gripTorque * (1 - CLAW.gripTorqueJitter + Math.random() * CLAW.gripTorqueJitter * 2)
+    return true
+  }
+
+  /** 조인트를 끊는다. 인형은 그 순간의 속도와 회전을 그대로 안고 떨어진다. */
+  const detach = () => {
+    if (jointRef.current) {
+      world.removeImpulseJoint(jointRef.current, true)
+      jointRef.current = null
+    }
+    heldIndex.current = null
+  }
+
+  /**
+   * 잡은 지점과 무게중심이 수평으로 얼마나 어긋났는지로 버티는지 판단한다.
+   *   토크 = 질량 × 중력 × 수평거리
+   */
+  const gripHolds = (delta: number) => {
+    // 문 직후의 요동은 봐준다
+    if (graceTimer.current > 0) {
+      graceTimer.current -= delta
+      return true
+    }
+    const doll = dollRefs.current[heldIndex.current!]
+    const claw = clawBodyRef.current
+    if (!doll || !claw) return false
+
+    const com = doll.worldCom()
+    const anchor = claw.translation()
+    const lever = Math.hypot(com.x - anchor.x, com.z - anchor.z)
+    const torque = doll.mass() * 9.81 * lever
+
+    if (torque > gripTorque.current) return false
+    // 흔들림으로 인한 미세한 미끄러짐
+    return Math.random() >= CLAW.slipPerSec * delta
+  }
 
   /** 집게 끝에서 grabRadius 안에 있는 가장 가까운 인형 */
   const nearestDoll = (): number | null => {
@@ -177,26 +275,26 @@ function SceneContent({
         const reached =
           target !== null &&
           (dollRefs.current[target]?.translation().y ?? 0) >= p.y - 0.34
-        if (p.y <= CLAW.bottomY || reached) setPhase('grab')
+        if (p.y <= CLAW.bottomY || reached) {
+          gripTimer.current = CLAW.gripDuration
+          setPhase('grip')
+        }
         break
       }
 
-      case 'grab': {
+      // 발톱이 서서히 오므라드는 동안 기다렸다가, 다 닫히면 물렸는지 판정한다
+      case 'grip': {
+        gripTimer.current -= delta
+        if (gripTimer.current > 0) break
+
         const target = nearestDoll()
-        if (target !== null && Math.random() < CLAW.grabChance) {
-          heldIndex.current = target
-          // 잡은 인형은 물리 대신 집게를 따라오게 한다
-          dollRefs.current[target]?.setBodyType(2, true)
-        }
+        if (target !== null && Math.random() < CLAW.grabChance) attach(target)
         setPhase('ascend')
         break
       }
 
       case 'ascend': {
-        if (heldIndex.current !== null && Math.random() < CLAW.slipPerSec * delta) {
-          dollRefs.current[heldIndex.current]?.setBodyType(0, true)
-          heldIndex.current = null
-        }
+        if (heldIndex.current !== null && !gripHolds(delta)) detach()
         p.y += CLAW.speedY * delta
         if (p.y >= CLAW.topY) {
           p.y = CLAW.topY
@@ -206,11 +304,9 @@ function SceneContent({
       }
 
       case 'carry': {
-        // 실제 기계처럼 옮기는 도중에 놓칠 수 있다
-        if (heldIndex.current !== null && Math.random() < CLAW.slipPerSec * delta) {
-          const idx = heldIndex.current
-          dollRefs.current[idx]?.setBodyType(0, true)
-          heldIndex.current = null
+        // 무게중심이 잡힌 지점에서 너무 벗어나면 옮기다가 놓친다
+        if (heldIndex.current !== null && !gripHolds(delta)) {
+          detach()
           setPhase('aim')
           break
         }
@@ -230,30 +326,16 @@ function SceneContent({
       }
 
       case 'release': {
-        const idx = heldIndex.current
-        if (idx !== null) {
-          const body = dollRefs.current[idx]
-          // 동적 물체로 되돌리면 그대로 투입구 아래로 떨어진다
-          body?.setBodyType(0, true)
-          body?.setLinvel({ x: 0, y: 0, z: 0 }, true)
-          heldIndex.current = null
-        }
+        // 조인트만 끊으면 인형은 그때의 속도·회전을 안고 그대로 떨어진다
+        detach()
         p.x = CLAW_BOUNDS.minX
         setPhase('aim')
         break
       }
     }
 
-    // 잡고 있는 인형을 집게에 붙여 옮긴다
-    const held = heldIndex.current
-    if (held !== null) {
-      dollRefs.current[held]?.setNextKinematicTranslation({
-        x: p.x,
-        y: p.y - 0.42,
-        z: p.z,
-      })
-    }
-
+    // 집게 강체를 움직이면 조인트로 매달린 인형이 물리적으로 딸려 온다
+    clawBodyRef.current?.setNextKinematicTranslation({ x: p.x, y: p.y - 0.42, z: p.z })
     if (clawRef.current) clawRef.current.position.set(p.x, p.y, p.z)
 
     // 크로스빔은 앞뒤로, 트롤리는 좌우로, 와이어는 그 사이를 잇는다
@@ -293,6 +375,14 @@ function SceneContent({
         />
       ))}
       </Suspense>
+
+      {/* 집게의 물리 몸체. 눈에 보이지는 않지만 인형과 조인트로 연결된다. */}
+      <RigidBody
+        ref={clawBodyRef}
+        type="kinematicPosition"
+        colliders={false}
+        position={[0, CLAW.topY - 0.42, 0]}
+      />
 
       <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
       <Claw3D ref={clawRef} open={open} />

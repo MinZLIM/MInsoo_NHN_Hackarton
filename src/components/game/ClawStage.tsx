@@ -52,7 +52,7 @@ export function ClawStage({ onEnd }: Props) {
   // 집게가 내려가기 시작하면 모터음, 집는 순간 철컹
   useEffect(() => {
     if (phase === 'descend') playSfx('motor')
-    else if (phase === 'grab') playSfx('grab')
+    else if (phase === 'grip') playSfx('grab')
   }, [phase])
 
   useEffect(() => {

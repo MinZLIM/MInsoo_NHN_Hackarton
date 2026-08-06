@@ -1,13 +1,15 @@
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useCallback, useMemo } from 'react'
 import { RigidBody, type RapierRigidBody } from '@react-three/rapier'
 import { useGLTF } from '@react-three/drei'
 import { Box3, Vector3, type Object3D } from 'three'
-import { DOLL } from './layout'
+import { DOLL, DOLL_MATERIAL } from './layout'
 import { modelLoadingManager, modelUrlFor } from './dollModels'
 
 interface Props {
   /** 인형 이름 — 어떤 모델을 쓸지 결정한다 */
   name: string
+  /** 크기별로 질량·마찰·무게중심이 다르다 */
+  size?: keyof typeof DOLL_MATERIAL
   position: [number, number, number]
   /**
    * kinematicPosition으로 두면 물리를 무시하고 코드가 위치를 정한다.
@@ -27,9 +29,33 @@ const TARGET_SIZE = DOLL.radius * 2.05
  * 정밀 충돌은 이 게임에서 이득이 없다.
  */
 export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
-  { name, position, bodyType = 'dynamic' },
+  { name, size = 'small', position, bodyType = 'dynamic' },
   ref,
 ) {
+  const mat = DOLL_MATERIAL[size]
+  // 구 근사 관성모멘트 — 인형이 너무 쉽게/어렵게 돌지 않도록 질량·크기에 맞춘다
+  const inertia = 0.4 * mat.mass * DOLL.radius ** 2
+
+  /**
+   * 질량과 무게중심은 prop으로 주면 콜라이더 밀도에 밀려 무시된다.
+   * 강체가 만들어진 직후에 직접 지정해야 확실히 적용된다.
+   */
+  const setBody = useCallback(
+    (body: RapierRigidBody | null) => {
+      if (body) {
+        body.setAdditionalMassProperties(
+          mat.mass,
+          { x: 0, y: mat.comY, z: 0 },
+          { x: inertia, y: inertia, z: inertia },
+          { x: 0, y: 0, z: 0, w: 1 },
+          true,
+        )
+      }
+      if (typeof ref === 'function') ref(body)
+      else if (ref) ref.current = body
+    },
+    [ref, mat, inertia],
+  )
   const url = useMemo(() => modelUrlFor(name), [name])
   const { scene } = useGLTF(url, undefined, undefined, (loader) => {
     loader.manager = modelLoadingManager
@@ -63,15 +89,26 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
 
   return (
     <RigidBody
-      ref={ref}
+      ref={setBody}
       position={position}
       rotation={rotation}
       type={bodyType}
-      colliders="ball"
-      restitution={0.08}
-      friction={0.95}
-      linearDamping={0.4}
-      angularDamping={0.75}
+      /*
+       * 공이 아니라 모델의 볼록 껍질을 쓴다. 구로 두면 인형이 구슬처럼 굴러다니고
+       * 쌓이지 않는다. 껍질이면 실제 형태대로 걸리고 기울고 포개진다.
+       */
+      colliders="hull"
+      /*
+       * 무게중심을 기하 중심보다 낮게 준다. 집게에 다리 끝이 물리면 무게중심이
+       * 잡힌 지점 아래로 돌아 내려오면서 인형이 회전한다 — 실제 인형뽑기의 그 장면이다.
+       * mass / centerOfMass / 관성모멘트는 massProperties로 함께 줘야 적용된다.
+       */
+      /* 콜라이더 밀도로 질량이 정해지지 않게 0으로 두고, 아래에서 직접 지정한다 */
+      density={0}
+      friction={mat.friction}
+      restitution={mat.restitution}
+      linearDamping={0.15}
+      angularDamping={0.35}
     >
       <primitive object={model} />
     </RigidBody>
