@@ -755,6 +755,7 @@ p {
   justify-content: center;
   gap: 12px;
   aspect-ratio: 4 / 3;
+  cursor: grab;
   border-radius: var(--r-md);
   border: 1px solid var(--border-hi);
   background:
@@ -762,26 +763,25 @@ p {
     linear-gradient(180deg, #2a2452 0%, #17132f 100%);
   overflow: hidden;
 }
-/* 바닥 반사 — 3D 뷰어가 들어와도 그대로 쓸 수 있는 무대 */
-.doll-detail__viewer::after {
-  content: '';
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: 34%;
-  height: 10px;
-  border-radius: 50%;
-  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.55), transparent 70%);
+/* 3D 캔버스가 영역을 꽉 채운다 */
+.doll-detail__viewer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
+/* 모델 로딩 중에는 이모지를 크게 보여 준다 */
 .doll-detail__viewer .doll-image {
   transform: scale(2.4);
   z-index: 1;
 }
 .doll-detail__hint {
   position: absolute;
-  bottom: 12px;
+  bottom: 10px;
   font-size: var(--fs-xs);
-  color: var(--text-mute);
+  color: var(--text-dim);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  z-index: 2;
 }
 .doll-detail__viewer.is-locked .doll-image {
   transform: scale(2.4);

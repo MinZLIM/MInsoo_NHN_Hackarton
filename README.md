@@ -14,6 +14,16 @@ Vite와 GitHub Pages를 이용해 배포하고, Supabase를 백엔드로 활용�
 mock 모드에서는 로그인 화면의 `🎮 게임 마스터 계정으로 채우기` 버튼으로 바로 입력됩니다.
 실제 Supabase 모드에서는 Dashboard에서 계정을 만든 뒤 `supabase/seed_master_account.sql`을 실행해 시연 상태를 준비합니다. 시연 상태를 다시 복구하려면 해당 SQL을 다시 실행합니다.
 
+### 🎨 사용 에셋
+
+| 에셋 | 출처 | 라이선스 |
+| :--- | :--- | :--- |
+| 인형 3D 모델 24종 | [Kenney — Cube Pets](https://kenney.nl/assets/cube-pets) | CC0 1.0 |
+| 한글 웹폰트 | [Pretendard](https://github.com/orioncactus/pretendard) | OFL 1.1 |
+| 로비·로그인 일러스트 | 자체 제작 | — |
+
+효과음과 배경음악은 음원 파일 없이 WebAudio로 합성합니다. (`src/lib/sfx.ts`)
+
 ---
 
 ## 📌 1. 프로젝트 개요 및 사용자 시나리오 (User Scenario)

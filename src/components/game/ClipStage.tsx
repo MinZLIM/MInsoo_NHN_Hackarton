@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button'
 import { ClipScene, type ClipPhase, type ClipSceneHandle } from '@/game/three/ClipScene'
 import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
-import { dollEmoji } from '@/lib/assets'
 import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 
 interface Props {
@@ -12,7 +11,7 @@ interface Props {
   onEnd: (caught: number) => void
 }
 
-const EMOJIS = MOCK_DOLLS.filter((d) => d.size === 'medium').map((d) => dollEmoji(d.image_path))
+const NAMES = MOCK_DOLLS.filter((d) => d.size === 'medium').map((d) => d.name)
 const FLASH_MS = 900
 
 /** 중형 — 빨래집게 인형뽑기 스테이지 (F2-8) */
@@ -102,7 +101,7 @@ export function ClipStage({ onEnd }: Props) {
           <color attach="background" args={['#151230']} />
           <fog attach="fog" args={['#151230', 16, 30]} />
           <ClipScene
-            emojis={EMOJIS}
+            names={NAMES}
             onCatch={setCaught}
             onPhaseChange={setPhase}
             onVerdict={onVerdict}

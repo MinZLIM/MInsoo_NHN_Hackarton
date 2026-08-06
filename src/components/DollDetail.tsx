@@ -1,21 +1,21 @@
+import { Suspense, lazy } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { DollImage } from '@/components/DollImage'
 import { SELL_PRICE, SIZE_LABEL, formatGold } from '@/lib/constants'
 import type { CollectionEntry } from '@/types/api'
 
+// three.js는 무겁다. 상세를 열 때만 받아온다.
+const DollViewer = lazy(() =>
+  import('@/components/DollViewer').then((m) => ({ default: m.DollViewer })),
+)
+
 interface Props {
   doll: CollectionEntry | null
   onClose: () => void
 }
 
-/**
- * 인형 상세.
- *
- * 가운데 뷰포트는 나중에 3D 모델을 띄울 자리다. 모델 파일(.glb)이 들어오면
- * 이 자리에 <Canvas> + OrbitControls를 넣어 회전시켜 볼 수 있게 한다.
- * 지금은 모델이 없어 이모지를 크게 보여주고 안내만 띄운다.
- */
+/** 인형 상세 — 3D로 돌려보고 스펙을 확인한다. */
 export function DollDetail({ doll, onClose }: Props) {
   return (
     <Modal
@@ -31,15 +31,22 @@ export function DollDetail({ doll, onClose }: Props) {
       {doll ? (
         <div className="doll-detail">
           <div className={`doll-detail__viewer${doll.owned ? '' : ' is-locked'}`}>
-            <DollImage
-              imagePath={doll.image_path}
-              name={doll.name}
-              masked={!doll.owned}
-              size="large"
-            />
+            <Suspense
+              fallback={
+                <DollImage
+                  imagePath={doll.image_path}
+                  name={doll.name}
+                  masked={!doll.owned}
+                  size="large"
+                />
+              }
+            >
+              <DollViewer name={doll.name} masked={!doll.owned} />
+            </Suspense>
+
             <p className="doll-detail__hint">
               {doll.owned
-                ? '🧊 3D 모델이 추가되면 여기서 돌려볼 수 있습니다'
+                ? '🖱️ 드래그해서 돌려보세요'
                 : '🔒 아직 획득하지 않은 인형입니다'}
             </p>
           </div>

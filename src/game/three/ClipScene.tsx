@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Physics, type RapierRigidBody } from '@react-three/rapier'
 import { Group, Mesh } from 'three'
@@ -14,7 +14,8 @@ export interface ClipSceneHandle {
 }
 
 interface Props {
-  emojis: string[]
+  /** 집게에 매달 인형 이름 목록 */
+  names: string[]
   onCatch: (total: number) => void
   onPhaseChange: (phase: ClipPhase) => void
   /** 성공/실패 판정 직후 한 번 호출된다 (연출용) */
@@ -45,7 +46,7 @@ export function ClipScene(props: Props) {
   )
 }
 
-function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Props) {
+function SceneContent({ names, onCatch, onPhaseChange, onVerdict, onReady }: Props) {
   const carouselRef = useRef<Group>(null)
   const barRef = useRef<Mesh>(null)
   const clipRefs = useRef<(Group | null)[]>([])
@@ -72,7 +73,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
         const baseAngle = (i / CLIP.slots) * Math.PI * 2
         return {
           baseAngle,
-          emoji: emojis[i % emojis.length] ?? '🧸',
+          name: names[i % names.length] ?? '거대곰',
           // 최초 1회만 쓰는 생성 위치. 이후 위치는 useFrame이 정한다.
           spawn: [
             Math.cos(baseAngle) * CLIP.armRadius,
@@ -81,7 +82,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
           ] as [number, number, number],
         }
       }),
-    [emojis],
+    [names],
   )
 
   const setPhase = (next: ClipPhase) => {
@@ -258,11 +259,12 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
         position은 생성 시점 값으로 고정한다 — 리렌더마다 새 값을 주면
         이미 떨어진 인형이 원래 자리로 되돌아가 잔상처럼 남는다.
       */}
+      <Suspense fallback={null}>
       {slots.map((slot, i) =>
         dispensedIds.includes(i) ? null : (
           <Doll3D
             key={i}
-            emoji={slot.emoji}
+            name={slot.name}
             bodyType={releasedIds.includes(i) ? 'dynamic' : 'kinematicPosition'}
             position={slot.spawn}
             ref={(body) => {
@@ -271,6 +273,7 @@ function SceneContent({ emojis, onCatch, onPhaseChange, onVerdict, onReady }: Pr
           />
         ),
       )}
+      </Suspense>
 
       {/* 누름 바 — 정면 한 자리에서만 오르내린다 */}
       <group position={[triggerX, 0, triggerZ]}>

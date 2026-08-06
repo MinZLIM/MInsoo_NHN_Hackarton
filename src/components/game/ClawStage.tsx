@@ -5,16 +5,14 @@ import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 import { ClawScene, type ClawPhase, type ClawSceneHandle } from '@/game/three/ClawScene'
 import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
-import { dollEmoji } from '@/lib/assets'
-import type { DollSize } from '@/types/api'
 
 interface Props {
   /** 60초 종료 시 획득 개수를 넘긴다 */
   onEnd: (caught: number) => void
 }
 
-const emojisOf = (size: DollSize) =>
-  MOCK_DOLLS.filter((d) => d.size === size).map((d) => dollEmoji(d.image_path))
+// 모듈 상수로 고정한다. 매 렌더 새 배열을 넘기면 씬이 통째로 다시 만들어진다.
+const SMALL_NAMES = MOCK_DOLLS.filter((d) => d.size === 'small').map((d) => d.name)
 
 /** 소형 인형뽑기 3D 스테이지 — 집게를 직접 조준한다 (F2-2, F2-3) */
 export function ClawStage({ onEnd }: Props) {
@@ -121,7 +119,7 @@ export function ClawStage({ onEnd }: Props) {
           <color attach="background" args={['#151230']} />
           <fog attach="fog" args={['#151230', 16, 30]} />
           <ClawScene
-            emojis={emojisOf('small')}
+            names={SMALL_NAMES}
             control="manual"
             onCatch={setCaught}
             onPhaseChange={setPhase}

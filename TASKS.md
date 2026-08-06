@@ -82,7 +82,7 @@
 | :-- | :-- | :--- | :--- |
 | ✅ | C-1 | DB 스키마 & RPC 계약 합의 — 테이블 8종 · RPC 7종 · 에러 코드 확정 | `docs/SCHEMA.md` *(BE 검토 완료)* |
 | ✅ | C-2 | `.env` 키 규약 확정 (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) | `.env.example`, `src/types/env.d.ts` |
-| ✅ | C-3 | 인형 45종 확정(30/10/5) + **에셋은 이모지 대체, Storage 업로드 시 자동 교체** | `src/mocks/dolls.ts`, `src/lib/assets.ts` |
+| ✅ | C-3 | 인형 45종 확정(30/10/5) + **실제 3D 모델 24종 적용** (Kenney Cube Pets, CC0) | `src/game/three/dollModels.ts` |
 
 > 💡 계약대로 만든 결과 **BE의 RPC 시그니처가 FE 호출부와 그대로 일치**합니다. 수정 없이 붙습니다.
 
@@ -168,7 +168,7 @@
 | :-- | :-- | :--- | :--- |
 | ✅ | B1-1 | `dolls` 마스터 테이블 + **45종 시드** (소형 30 / 중형 10 / 대형 5, FE 이름·경로와 일치) | REQ-COLL-01 |
 | ✅ | B1-2 | `user_dolls` 보유 테이블 | REQ-COLL-02 |
-| ✂️ | B1-3 | Storage 버킷 + 인형 이미지 — **이번 제출 범위에서 제외** (FE가 이모지로 대체) | REQ-COLL-02 |
+| ✅ | B1-3 | 인형 에셋 — **Kenney Cube Pets(CC0) 3D 모델 24종을 번들**로 해결. Storage 불필요 | REQ-COLL-02 |
 | ✅ | B1-4 | `profiles`를 `supabase_realtime` publication에 추가 (Gold 실시간 반영) | REQ-LOBBY-01 |
 | ✅ | B1-5 | `game_sessions` 테이블 + **RPC `start_game(p_mode)`** | REQ-GAME-02 |
 | ✅ | B1-6 | **RPC `finish_game(p_session_id, p_caught)`** — 점수 산출 & 인형 지급 | REQ-GAME-01 |
@@ -306,6 +306,8 @@
 | 08.03 | `b29f29e` | **게임 사운드**(WebAudio 합성) + 집게 강도 값을 `CLAW` 한곳으로 정리 |
 | 08.03 | `4157a52` | 우측 상단 **환경설정** (소리 on/off · 볼륨 · 로그아웃) |
 | **08.06** | **`99beafa`** | 🗄 **BE 백엔드 머지 (PR #1)** — 테이블 7종 · RPC 7종 · RLS 8종 · 인형 45종 시드 · 마스터 계정 시드 · `SUPABASE_QUICKSTART.md` |
+| 08.06 | `dd5daaa` | TASKS.md에 BE 진행 상황 반영 |
+| 08.06 | — | **인형을 실제 3D 모델로 교체** (Kenney Cube Pets, CC0 24종) + 콜렉터함 3D 뷰어 |
 
 ---
 

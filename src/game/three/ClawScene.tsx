@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Physics, type RapierRigidBody } from '@react-three/rapier'
 import { Group } from 'three'
@@ -32,7 +32,8 @@ export interface ClawSceneHandle {
 }
 
 interface Props {
-  emojis: string[]
+  /** 기계에 넣을 인형 이름 목록 */
+  names: string[]
   control: ClawControl
   onCatch: (total: number) => void
   onPhaseChange: (phase: ClawPhase) => void
@@ -55,7 +56,7 @@ export function ClawScene(props: Props) {
 }
 
 function SceneContent({
-  emojis,
+  names,
   control,
   onCatch,
   onPhaseChange,
@@ -89,7 +90,7 @@ function SceneContent({
         const col = idx % cols
         const row = Math.floor(idx / cols)
         return {
-          emoji: emojis[i % emojis.length] ?? '🧸',
+          name: names[i % names.length] ?? '토끼',
           position: [
             HOLE.edgeX + 0.62 + col * 0.66 + (row % 2) * 0.2 + layer * 0.12,
             DOLL.radius + 0.1 + layer * 0.62,
@@ -97,7 +98,7 @@ function SceneContent({
           ] as [number, number, number],
         }
       }),
-    [emojis],
+    [names],
   )
 
   const setPhase = (next: ClawPhase) => {
@@ -280,16 +281,18 @@ function SceneContent({
       <Cabinet />
       <GroundShadows y={0.015} scale={8} />
 
+      <Suspense fallback={null}>
       {dolls.map((doll, i) => (
         <Doll3D
           key={i}
-          emoji={doll.emoji}
+          name={doll.name}
           position={doll.position}
           ref={(body) => {
             dollRefs.current[i] = body
           }}
         />
       ))}
+      </Suspense>
 
       <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
       <Claw3D ref={clawRef} open={open} />
