@@ -4,7 +4,6 @@ import { ConvexHullCollider, RigidBody, type RapierRigidBody } from '@react-thre
 import type { Group } from 'three'
 import { DOLL, DOLL_MATERIAL } from './layout'
 import { useDollModel } from './useDollModel'
-import { DollDress } from './DollDress'
 import type { DollSize } from '@/types/api'
 
 interface Props {
@@ -46,7 +45,7 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
   // 구 근사 관성모멘트 — 인형이 너무 쉽게/어렵게 돌지 않도록 질량·크기에 맞춘다
   const inertia = 0.4 * mat.mass * DOLL.radius ** 2
 
-  const { model, hull, dims, look } = useDollModel(name)
+  const { model, hull, dress } = useDollModel(name, size)
 
   // 종류마다 조금씩 다른 각도로 놓여 있어야 무더기가 자연스럽다
   const rotation = useMemo(
@@ -117,7 +116,7 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
 
       <group ref={skinRef}>
         <primitive object={model} />
-        <DollDress name={name} size={size} look={look} dims={dims} hull={hull} />
+        <primitive object={dress} />
       </group>
     </RigidBody>
   )

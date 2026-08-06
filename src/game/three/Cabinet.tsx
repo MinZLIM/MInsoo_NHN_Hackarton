@@ -11,13 +11,19 @@ interface Props {
    * 중형(빨래집게)은 집게가 열리는 즉시 획득이라 구멍이 필요 없다.
    */
   prizeHole?: boolean
+  /**
+   * 천장 형광등 밝기.
+   * 중형은 회전 원판이 천장 바로 아래에 있어, 소형과 같은 밝기로 두면
+   * 집게와 인형이 하얗게 날아간다.
+   */
+  lightIntensity?: number
 }
 
 /**
  * 인형뽑기 기계의 몸체.
  * prizeHole이면 바닥 왼쪽을 비워 투입구를 만들고, 그 옆에 턱을 세운다.
  */
-export function Cabinet({ prizeHole = true }: Props = {}) {
+export function Cabinet({ prizeHole = true, lightIntensity = 7 }: Props = {}) {
   const floorWidth = prizeHole ? HALF_W - HOLE.edgeX : CABINET.width
   const floorCenterX = prizeHole ? (HOLE.edgeX + HALF_W) / 2 : 0
   const holeWidth = HOLE.edgeX + HALF_W
@@ -146,6 +152,39 @@ export function Cabinet({ prizeHole = true }: Props = {}) {
           <boxGeometry args={[0.1, CABINET.height, 0.1]} />
           <meshStandardMaterial color="#8b6bff" roughness={0.22} metalness={0.85} />
         </mesh>
+      ))}
+
+      <CeilingLights intensity={lightIntensity} />
+    </>
+  )
+}
+
+/**
+ * 천장 안쪽 형광등.
+ *
+ * 등 모양만 있고 실제로 빛을 내지 않으면 상자 안이 어두워 인형 색이 죽는다.
+ * 등마다 앞뒤로 조명을 두 개씩 놓아 바닥까지 고르게 닿게 한다.
+ */
+function CeilingLights({ intensity }: { intensity: number }) {
+  return (
+    <>
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * (HALF_W * 0.55), CABINET.height - 0.06, 0]}>
+          <mesh>
+            <boxGeometry args={[0.09, 0.03, CABINET.depth * 0.86]} />
+            <meshBasicMaterial color="#dff0ff" />
+          </mesh>
+          {[-0.28, 0.28].map((offset) => (
+            <pointLight
+              key={offset}
+              position={[0, -0.12, CABINET.depth * offset]}
+              intensity={intensity}
+              color="#e8f4ff"
+              distance={5.2}
+              decay={1.7}
+            />
+          ))}
+        </group>
       ))}
     </>
   )

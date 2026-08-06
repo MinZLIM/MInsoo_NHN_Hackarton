@@ -9,7 +9,6 @@ import { Gantry, PrizeDoor } from './Gantry'
 import { PrizeBurst, type PrizeBurstHandle } from './PrizeBurst'
 import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 import {
-  CABINET,
   CLAW,
   CLAW_BOUNDS,
   DOLL,
@@ -84,6 +83,8 @@ function SceneContent({
   const input = useRef({ x: 0, z: 0 })
   const swingDir = useRef<1 | -1>(1)
   const heldIndex = useRef<number | null>(null)
+  /** 지금 파지가 얼마나 아슬아슬한지 (0 여유 ~ 1 한계). 집게 연출이 이 값을 읽는다. */
+  const strain = useRef(0)
   /** 집게와 인형을 잇는 조인트. 이게 있는 동안 인형은 물리로 매달린다. */
   const jointRef = useRef<ReturnType<typeof world.createImpulseJoint> | null>(null)
   /** 이번에 잡은 집게가 버틸 수 있는 토크 — 잡을 때마다 조금씩 다르다 */
@@ -220,6 +221,7 @@ function SceneContent({
       jointRef.current = null
     }
     heldIndex.current = null
+    strain.current = 0
   }
 
   /**
@@ -241,9 +243,29 @@ function SceneContent({
     const lever = Math.hypot(com.x - anchor.x, com.z - anchor.z)
     const torque = doll.mass() * 9.81 * lever
 
+    // 0이면 여유롭게 잡혀 있고, 1에 가까울수록 놓치기 직전이다
+    strain.current = Math.min(1, torque / Math.max(gripTorque.current, 0.001))
+
     if (torque > gripTorque.current) return false
-    // 흔들림으로 인한 미세한 미끄러짐
-    return Math.random() >= CLAW.slipPerSec * delta
+
+    /*
+     * 버티고는 있지만 아슬아슬하면, 인형이 집게 안에서 조금씩 밀린다.
+     * 붙었다 떨어졌다만 하면 왜 놓쳤는지 보이지 않는다. 무게중심이 쏠린
+     * 방향으로 회전을 조금씩 먹여 실제로 미끄러지는 게 보이게 한다.
+     */
+    if (strain.current > CLAW.slipVisibleFrom) {
+      const over =
+        (strain.current - CLAW.slipVisibleFrom) / (1 - CLAW.slipVisibleFrom)
+      const push = over * CLAW.slipTorque * delta
+      // 무게중심이 쏠린 쪽으로 기울어진다
+      doll.applyTorqueImpulse(
+        { x: (com.z - anchor.z) * push, y: 0, z: -(com.x - anchor.x) * push },
+        true,
+      )
+    }
+
+    // 흔들림으로 인한 미세한 미끄러짐 — 아슬아슬할수록 자주 일어난다
+    return Math.random() >= CLAW.slipPerSec * (1 + strain.current * 2) * delta
   }
 
   /** 집게 끝에서 grabRadius 안에 있는 가장 가까운 인형 */
@@ -425,33 +447,10 @@ function SceneContent({
       />
 
       <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
-      <Claw3D ref={clawRef} open={open} />
+      <Claw3D ref={clawRef} open={open} strain={() => strain.current} />
       <PrizeDoor x={HOLE_CENTER_X} />
       <PrizeBurst ref={burstRef} position={[HOLE_CENTER_X, 0.45, 0]} />
 
-      {/*
-       * 천장 안쪽 조명 라인.
-       * 형광등 모양만 있고 실제로 빛을 내지 않으면 상자 안이 어두워 인형 색이 죽는다.
-       * 등마다 앞뒤로 조명을 두 개씩 놓아 바닥까지 고르게 닿게 한다.
-       */}
-      {[-1, 1].map((side) => (
-        <group key={side} position={[side * (HALF_W * 0.55), CABINET.height - 0.06, 0]}>
-          <mesh>
-            <boxGeometry args={[0.09, 0.03, CABINET.depth * 0.86]} />
-            <meshBasicMaterial color="#dff0ff" />
-          </mesh>
-          {[-0.28, 0.28].map((offset) => (
-            <pointLight
-              key={offset}
-              position={[0, -0.12, CABINET.depth * offset]}
-              intensity={7}
-              color="#e8f4ff"
-              distance={5.2}
-              decay={1.7}
-            />
-          ))}
-        </group>
-      ))}
       <PostFx bloom={0.65} />
     </>
   )

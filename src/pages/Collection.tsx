@@ -98,6 +98,7 @@ export function Collection() {
                         name={doll.name}
                         masked={!doll.owned}
                         size={doll.size}
+                        dollSize={doll.size}
                       />
                     </span>
                     <span className="vitrine__shelf" aria-hidden />

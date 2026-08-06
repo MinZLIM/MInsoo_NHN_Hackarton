@@ -38,6 +38,7 @@ export function DollDetail({ doll, onClose }: Props) {
                   name={doll.name}
                   masked={!doll.owned}
                   size="large"
+                  dollSize={doll.size}
                 />
               }
             >

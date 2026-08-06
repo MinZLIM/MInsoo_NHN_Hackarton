@@ -1,11 +1,16 @@
 import { forwardRef, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Group } from 'three'
+import { Group, type MeshStandardMaterial } from 'three'
 import { CLAW } from './layout'
 
 interface Props {
   /** 열린 상태면 발톱을 벌린다 */
   open: boolean
+  /**
+   * 파지가 얼마나 아슬아슬한지 (0 여유 ~ 1 한계).
+   * 매 프레임 읽어야 해서 함수로 받는다 — 값으로 받으면 프레임마다 리렌더가 난다.
+   */
+  strain?: () => number
 }
 
 /*
@@ -24,23 +29,43 @@ const FINGERS = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3]
  *  - 발톱이 즉시 꺾이지 않고 서서히 벌어지고 오므라든다
  *  - 옆으로 움직이면 관성으로 살짝 기운다 (실제 기계의 흔들림)
  */
-export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
+export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open, strain }, ref) {
   const fingersRef = useRef<Group[]>([])
   const swayRef = useRef<Group>(null)
+  const glowRef = useRef<MeshStandardMaterial[]>([])
 
   /** 0(닫힘) ~ 1(열림) */
   const grip = useRef(1)
   const prev = useRef({ x: 0, z: 0 })
   const sway = useRef({ x: 0, z: 0 })
+  /** 떨림 위상 — Math.random을 매 프레임 쓰면 화면이 지직거린다 */
+  const shake = useRef(0)
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 1 / 30)
     const target = open ? 1 : 0
     grip.current += (target - grip.current) * Math.min(1, CLAW.gripSpeed * delta)
 
-    const spread = 0.16 + grip.current * 0.5
-    fingersRef.current.forEach((finger) => {
-      if (finger) finger.rotation.z = -spread
+    const load = strain?.() ?? 0
+    shake.current += delta * 34
+
+    // 무거운 쪽으로 끌리면 발톱이 조금씩 벌어진다 — 놓치기 직전이 보인다
+    const spread = 0.16 + grip.current * 0.5 + load * 0.14
+    fingersRef.current.forEach((finger, i) => {
+      if (!finger) return
+      finger.rotation.z = -spread
+      // 버티느라 발톱이 떨린다
+      finger.rotation.x = load > 0.001 ? Math.sin(shake.current + i * 2.1) * load * 0.05 : 0
+    })
+
+    // 힘을 받을수록 발광이 청록에서 붉게 바뀐다
+    const r = 0.25 + load * 0.75
+    const g = 0.88 - load * 0.66
+    const b = 1 - load * 0.82
+    glowRef.current.forEach((material) => {
+      if (!material) return
+      material.color.setRGB(r, g, b)
+      material.emissive.setRGB(r, g, b)
     })
 
     // 부모의 실제 이동량으로 흔들림을 만든다
@@ -54,8 +79,10 @@ export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
       sway.current.x += (-vz * 0.06 - sway.current.x) * Math.min(1, 6 * delta)
       sway.current.z += (vx * 0.06 - sway.current.z) * Math.min(1, 6 * delta)
 
-      swayRef.current.rotation.x = sway.current.x
-      swayRef.current.rotation.z = sway.current.z
+      // 무거운 인형이 매달리면 집게가 그 무게에 눌려 천천히 휘청인다
+      const lean = load * 0.07
+      swayRef.current.rotation.x = sway.current.x + Math.sin(shake.current * 0.35) * lean
+      swayRef.current.rotation.z = sway.current.z + Math.cos(shake.current * 0.29) * lean
     }
   })
 
@@ -83,6 +110,9 @@ export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
         <mesh position={[0, -0.1, 0]}>
           <cylinderGeometry args={[0.17, 0.17, 0.045, 20]} />
           <meshStandardMaterial
+            ref={(m) => {
+              if (m) glowRef.current[0] = m
+            }}
             color={CLAW_GLOW}
             emissive={CLAW_GLOW}
             emissiveIntensity={1.5}
@@ -117,6 +147,9 @@ export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
                 <mesh position={[0, -0.21, 0]}>
                   <boxGeometry args={[0.08, 0.05, 0.095]} />
                   <meshStandardMaterial
+                    ref={(m) => {
+                      if (m) glowRef.current[i + 1] = m
+                    }}
                     color={CLAW_GLOW}
                     emissive={CLAW_GLOW}
                     emissiveIntensity={1.8}

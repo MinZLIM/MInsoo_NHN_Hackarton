@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Center, ContactShadows, Environment, OrbitControls } from '@react-three/drei'
 import type { Mesh, MeshStandardMaterial } from 'three'
 import { useDollModel } from '@/game/three/useDollModel'
-import { DollDress } from '@/game/three/DollDress'
+
 import type { DollSize } from '@/types/api'
 
 interface Props {
@@ -15,10 +15,11 @@ interface Props {
 
 function Model({ name, size = 'small', masked }: Props) {
   // 뷰어는 화면을 꽉 채워야 하므로 게임 안보다 크게 잡는다
-  const { model, dims, look, hull } = useDollModel(name, 2.4)
+  const { model, dress } = useDollModel(name, size, 2.4)
 
   useEffect(() => {
     if (!masked) return
+    // 재질은 prepareDollObject가 인형마다 복제해 둔다. 여기서 칠해도 다른 인형에 번지지 않는다.
     model.traverse((child) => {
       const material = (child as Mesh).material as MeshStandardMaterial | undefined
       material?.color?.set('#0d0a1c')
@@ -30,9 +31,7 @@ function Model({ name, size = 'small', masked }: Props) {
       <group>
         <primitive object={model} />
         {/* 기계 안과 같은 장식을 달아, 도감에서 본 인형이 그대로 나온다 */}
-        {!masked && (
-          <DollDress name={name} size={size} look={look} dims={dims} hull={hull} />
-        )}
+        {!masked && <primitive object={dress} />}
       </group>
     </Center>
   )

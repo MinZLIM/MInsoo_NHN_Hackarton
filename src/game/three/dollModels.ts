@@ -8,6 +8,7 @@
 
 import { LoadingManager } from 'three'
 import colormapUrl from '@/assets/models/colormap.png?url'
+import { hasProceduralDoll } from './proceduralDolls'
 
 /**
  * Kenney GLB는 텍스처를 파일 안에 넣지 않고 `Textures/colormap.png`를 상대경로로 참조한다.
@@ -36,7 +37,13 @@ const byName: Record<string, string> = Object.fromEntries(
 
 export const MODEL_NAMES = Object.keys(byName).sort()
 
-/** 인형 이름이 실제 동물과 맞는 경우 — 눈으로 봤을 때 어긋나면 안 되는 것들 */
+/**
+ * 인형 이름이 실제 동물과 맞는 경우 — 눈으로 봤을 때 어긋나면 안 되는 것들.
+ *
+ * Kenney 모델에 없는 종(드래곤·유니콘·문어·로봇 …)은 예전에 원숭이·기린·게로
+ * 때웠지만 이름과 생김새가 아예 달랐다. 그런 종은 proceduralDolls에서 직접
+ * 만들며, 이 표에는 넣지 않는다.
+ */
 const EXACT: Record<string, string> = {
   토끼: 'bunny',
   점보토끼: 'bunny',
@@ -61,28 +68,8 @@ const EXACT: Record<string, string> = {
   '전설의 곰': 'polar',
   늑대: 'dog',
   너구리: 'beaver',
-  다람쥐: 'beaver',
   햄스터: 'beaver',
-  양: 'hog',
-  상어: 'fish',
-  빅샤크: 'fish',
-  고래: 'fish',
-  '우주 고래': 'fish',
-  문어: 'crab',
-  오징어: 'crab',
-  거북이: 'crab',
-  개구리: 'caterpillar',
   오리: 'parrot',
-  유니콘: 'giraffe',
-  '황금 유니콘': 'giraffe',
-  드래곤: 'monkey',
-  메가드래곤: 'monkey',
-  '거대 드래곤': 'monkey',
-  공룡: 'elephant',
-  대형양: 'hog',
-  로봇: 'bee',
-  '전설의 로봇': 'bee',
-  외계인: 'bee',
 }
 
 /**
@@ -110,8 +97,15 @@ function hash(text: string) {
   return h
 }
 
-/** 인형 이름에 대응하는 모델 URL. 매칭이 없으면 이름 해시로 고르게 나눈다. */
+/**
+ * 인형 이름에 대응하는 모델 URL. 매칭이 없으면 이름 해시로 고르게 나눈다.
+ *
+ * 직접 만든 모델을 쓰는 인형은 GLB가 필요 없지만, useGLTF를 조건부로 부를 수
+ * 없어 자리를 채울 URL이 하나 필요하다. 토끼는 어차피 항상 쓰이므로
+ * 그 파일을 돌려줘 쓸데없는 다운로드를 막는다.
+ */
 export function modelUrlFor(dollName: string): string {
+  if (hasProceduralDoll(dollName)) return byName.bunny ?? byName[MODEL_NAMES[0]]
   const exact = EXACT[dollName]
   if (exact && byName[exact]) return byName[exact]
   return byName[MODEL_NAMES[hash(dollName) % MODEL_NAMES.length]]

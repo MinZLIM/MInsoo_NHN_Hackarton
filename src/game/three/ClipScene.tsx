@@ -212,7 +212,7 @@ function SceneContent({ names, onCatch, onPhaseChange, onVerdict, onReady }: Pro
   return (
     <>
       <SceneLighting />
-      <Cabinet prizeHole={false} />
+      <Cabinet prizeHole={false} lightIntensity={3.2} />
       <GroundShadows y={0.015} scale={8} />
 
       {/* 천장에서 내려온 회전축 */}

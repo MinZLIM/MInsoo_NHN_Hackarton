@@ -106,7 +106,12 @@ function SellTab() {
       <ul className="sell-list">
         {owned.map((doll) => (
           <li key={doll.id} className="sell-item">
-            <DollImage imagePath={doll.image_path} name={doll.name} size={doll.size} />
+            <DollImage
+              imagePath={doll.image_path}
+              name={doll.name}
+              size={doll.size}
+              dollSize={doll.size}
+            />
             <span className="sell-item__body">
               <span className="sell-item__name">{doll.name}</span>
               <span className="sell-item__meta">
