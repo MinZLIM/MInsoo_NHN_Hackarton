@@ -5,7 +5,7 @@
 > 변경이 필요하면 **먼저 이 문서를 고치고 PR에 명시** → 상대에게 공유 후 코드 반영.
 
 - 작성일: 2026-08-03 (Task C-1)
-- 상태: 🟡 **FE 초안 — BE 검토/합의 필요**
+- 상태: ✅ **BE 검토 완료 — Supabase 적용 및 통합 QA 대기**
 - 규칙: 모든 금액은 정수(`bigint`), 단위는 Gold. **소수점 없음.**
 
 ---
@@ -29,7 +29,7 @@ create type session_status as enum ('playing', 'finished', 'aborted');
 create type ledger_reason as enum ('signup', 'game_entry', 'doll_sell', 'item_buy', 'transfer_in', 'transfer_out');
 ```
 
-> 🔎 **BE 확인 필요**: 티어 7단계 구성이 맞는지. README에는 `Bronze → Silver → Gold → ... → Challenger` 로만 표기돼 있어 중간 단계를 임의로 정했습니다.
+> ✅ **BE 결정**: 티어는 `Bronze → Silver → Gold → Platinum → Diamond → Master → Challenger` 7단계로 확정합니다.
 
 ---
 
@@ -44,9 +44,10 @@ create type ledger_reason as enum ('signup', 'game_entry', 'doll_sell', 'item_bu
 | `created_at` | `timestamptz` default now() | |
 
 - 트리거: `auth.users` INSERT 시 `profiles` 자동 생성 + gold 10000
-- RLS: `select` 전체 허용(랭킹/송금 대상 조회용, **gold 제외 뷰 사용 권장**) / `update`는 `nickname`만 본인 허용 / `gold` 컬럼 update **차단**
+- RLS: 본인 행만 `select` 허용 / `update`는 `nickname` 컬럼만 본인 허용 / `gold` 컬럼 update **차단**
+- 타 유저 닉네임은 `transfer_gold()`와 `get_leaderboard()` RPC 내부에서만 조회합니다.
 
-> 🔎 **BE 확인 필요**: 타 유저의 `gold`가 노출되지 않도록 `public_profiles` 뷰(id, nickname만)를 별도로 만들지 여부.
+> ✅ **BE 결정**: `public_profiles` 뷰는 만들지 않습니다. 현재 FE는 타 유저 목록을 직접 조회하지 않으며, 필요한 정보만 RPC가 반환하도록 제한합니다.
 
 ### 2.2 `dolls` — 인형 마스터 (45종)
 | 컬럼 | 타입 | 비고 |
@@ -169,7 +170,7 @@ FE는 **획득 인형 목록이 아니라 "획득 개수"만** 보냅니다. 어
 - `status='playing'` 세션만 처리 → 처리 후 `finished`로 변경 (중복 정산 차단)
 - 점수 산출 · 인형 지급 · 승강등 판정이 **하나의 트랜잭션**
 
-> 🔎 **BE 확인 필요**: `p_caught` 상한값. 소형 60초에 현실적으로 몇 개까지 가능한지 게임 튜닝 후 확정.
+> ✅ **BE 결정**: `p_caught` 상한은 소형 10개, 중형 10개, 대형 1개로 확정합니다.
 
 ### 4.3 `get_collection()` → `json[]`
 콜렉터함 조회. **미보유 인형도 전부 포함**해서 반환합니다 (마스킹 렌더링용, REQ-COLL-02).
@@ -222,6 +223,7 @@ FE는 **획득 인형 목록이 아니라 "획득 개수"만** 보냅니다. 어
 - 버킷: `assets` (public read)
 - 경로: `dolls/{size}_{번호}.png` (예: `dolls/small_01.png`, `dolls/large_05.png`)
 - FE는 `image_path`를 받아 `supabase.storage.from('assets').getPublicUrl(path)`로 렌더링
+- **제출 버전 결정**: 실제 이미지 업로드는 후순위로 제외합니다. 파일이 없으면 기존 `DollImage` 컴포넌트가 이모지로 자동 대체합니다.
 
 ---
 
@@ -253,14 +255,15 @@ select '<master-user-uuid>', id, 1, now() from dolls
 on conflict (user_id, doll_id) do update set count = excluded.count;
 ```
 
-> 🔎 **BE 확인 필요**: 이 계정을 프로덕션에도 남길지, 발표 후 삭제할지.
+> ✅ **BE 결정**: 시연 계정은 Dashboard에서 수동 생성한 뒤 `supabase/seed_master_account.sql`로 데이터만 채웁니다. 심사 종료 후 계정 삭제를 권장합니다.
 
 ---
 
-## 7. 미확정 항목 (Meeting 2에서 결정)
+## 7. BE 검토 결정 사항
 
-- [ ] 티어 중간 단계 구성 (7단계안 확정 여부)
-- [ ] `public_profiles` 뷰 도입 여부 (타 유저 gold 노출 차단)
-- [ ] `p_caught` 모드별 상한값
-- [ ] 이메일 인증(confirm) 활성화 여부 — **데모 편의상 비활성 권장**
-- [ ] 인형 45종 이름/이미지 에셋 최종본
+- [x] 티어는 7단계로 확정
+- [x] `public_profiles` 뷰 미도입 — 본인 프로필만 직접 조회하고 타 유저 정보는 RPC로 제한
+- [x] `p_caught` 상한: small 10 / medium 10 / large 1
+- [x] 이메일 인증(confirm): 제출·QA 기간에는 비활성
+- [x] 인형 이름 45종은 `src/mocks/dolls.ts`와 동일하게 확정
+- [x] 실제 이미지 Storage 업로드는 후순위로 제외하고 이모지 fallback 사용
