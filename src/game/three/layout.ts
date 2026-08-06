@@ -38,13 +38,6 @@ export const GANTRY = {
   trolleySize: 0.26,
 }
 
-/** 상단 간판 */
-export const MARQUEE = {
-  y: CABINET.height + 0.62,
-  width: CABINET.width + 0.5,
-  height: 0.86,
-}
-
 export const CLAW = {
   /** 대기 높이 */
   topY: 2.7,

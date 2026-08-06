@@ -6,7 +6,6 @@ import { Cabinet } from './Cabinet'
 import { Doll3D } from './Doll3D'
 import { Claw3D } from './Claw3D'
 import { Gantry, PrizeDoor } from './Gantry'
-import { marqueeTexture } from './signTexture'
 import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 import {
   CABINET,
@@ -19,7 +18,6 @@ import {
   HALF_W,
   HOLE_CENTER_X,
   HOLE,
-  MARQUEE,
 } from './layout'
 
 export type ClawPhase = 'aim' | 'descend' | 'grip' | 'ascend' | 'carry' | 'release'
@@ -387,23 +385,6 @@ function SceneContent({
       <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
       <Claw3D ref={clawRef} open={open} />
       <PrizeDoor x={HOLE_CENTER_X} />
-
-      {/* 상단 간판 */}
-      <mesh position={[0, MARQUEE.y, HALF_D * 0.2]}>
-        <boxGeometry args={[MARQUEE.width, MARQUEE.height, 0.14]} />
-        <meshStandardMaterial color="#241c4a" roughness={0.7} />
-      </mesh>
-      <mesh position={[0, MARQUEE.y, HALF_D * 0.2 + 0.08]}>
-        <planeGeometry args={[MARQUEE.width - 0.12, MARQUEE.height - 0.1]} />
-        <meshBasicMaterial map={marqueeTexture()} toneMapped={false} />
-      </mesh>
-      {/* 간판을 비추는 빛 */}
-      <pointLight
-        position={[0, MARQUEE.y - 0.5, HALF_D * 0.2 + 0.9]}
-        intensity={14}
-        color="#ff9ae0"
-        distance={5}
-      />
 
       {/* 천장 안쪽 조명 라인 */}
       {[-1, 1].map((side) => (

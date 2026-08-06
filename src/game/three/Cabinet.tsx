@@ -108,11 +108,32 @@ export function Cabinet({ prizeHole = true }: Props = {}) {
         </mesh>
       </RigidBody>
 
-      {/* 천장 레일 — 집게가 매달린 곳 */}
+      {/* 천장 — 위에서 내려다볼 수 있도록 유리로 둔다 */}
       <mesh position={[0, CABINET.height, 0]}>
         <boxGeometry args={[CABINET.width + t * 2, t, CABINET.depth + t * 2]} />
-        <meshStandardMaterial color={FRAME_COLOR} roughness={0.28} metalness={0.7} />
+        <meshPhysicalMaterial
+          color={GLASS_COLOR}
+          transparent
+          opacity={0.1}
+          roughness={0.04}
+          metalness={0}
+          clearcoat={1}
+          clearcoatRoughness={0.03}
+        />
       </mesh>
+      {/* 천장 테두리 프레임 — 유리만 있으면 경계가 보이지 않는다 */}
+      {[-1, 1].map((side) => (
+        <mesh key={`fx${side}`} position={[side * (HALF_W + t / 2), CABINET.height, 0]}>
+          <boxGeometry args={[t, t * 1.1, CABINET.depth + t * 2]} />
+          <meshStandardMaterial color={FRAME_COLOR} roughness={0.28} metalness={0.7} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) => (
+        <mesh key={`fz${side}`} position={[0, CABINET.height, side * (HALF_D + t / 2)]}>
+          <boxGeometry args={[CABINET.width + t * 2, t * 1.1, t]} />
+          <meshStandardMaterial color={FRAME_COLOR} roughness={0.28} metalness={0.7} />
+        </mesh>
+      ))}
 
       {/* 모서리 기둥 4개 */}
       {[
