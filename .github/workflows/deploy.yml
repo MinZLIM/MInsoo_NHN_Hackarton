@@ -56,13 +56,16 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    # Pages 쪽 처리가 오래 걸릴 때가 있어 잡 자체의 여유도 넉넉히 준다
+      url: ${{ steps.deployment.outputs.page_url || steps.retry.outputs.page_url }}
     timeout-minutes: 40
     steps:
+      # Pages 처리가 10분을 넘겨 실패하는 일이 잦다. (08.04에는 16초였는데 08.06에는
+      # 8~10분이 걸린다. 산출물은 4.3 -> 5.0 MB로 거의 그대로라 우리 쪽 문제는 아니다.)
+      # deploy-pages의 대기 시간 상한이 10분이라 늘릴 수 없으므로, 한 번 더 시도한다.
       - id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # 기본 대기 시간이 10분인데 실제 배포에 8~10분이 걸려 계속 초과했다.
-          # (성공한 실행도 8분 19초였다) 30분으로 늘려 여유를 둔다.
-          timeout: 1800000
+        continue-on-error: true
+
+      - id: retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
