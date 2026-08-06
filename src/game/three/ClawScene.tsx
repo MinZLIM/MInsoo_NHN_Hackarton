@@ -6,6 +6,7 @@ import { Cabinet } from './Cabinet'
 import { Doll3D } from './Doll3D'
 import { Claw3D } from './Claw3D'
 import { Gantry, PrizeDoor } from './Gantry'
+import { PrizeBurst, type PrizeBurstHandle } from './PrizeBurst'
 import { GroundShadows, PostFx, SceneLighting } from './SceneQuality'
 import {
   CABINET,
@@ -93,24 +94,45 @@ function SceneContent({
   const graceTimer = useRef(0)
   const caught = useRef(0)
   const collected = useRef(new Set<number>())
+  const burstRef = useRef<PrizeBurstHandle>(null)
 
   const dolls = useMemo(
     () =>
       Array.from({ length: DOLL.count }, (_, i) => {
-        // 턱 오른쪽 영역에 2단으로 쌓는다. 떨어지면서 자연스럽게 무더기가 된다.
+        /*
+         * 바닥 전체에 2단으로 흩어 놓는다. 격자 그대로 두면 진열대처럼 보이므로
+         * 칸마다 위치와 기울기를 조금씩 어긋나게 준다. 떨어지면서 서로 부딪혀
+         * 실제 기계처럼 뒤엉킨 무더기가 된다.
+         */
         const cols = 4
-        const perLayer = cols * 2
+        const rows = 2
+        const perLayer = cols * rows
         const layer = Math.floor(i / perLayer)
         const idx = i % perLayer
         const col = idx % cols
         const row = Math.floor(idx / cols)
+
+        const minX = HOLE.edgeX + 0.5
+        const spanX = HALF_W - 0.45 - minX
+        const minZ = -HALF_D + 0.55
+        const spanZ = HALF_D - 0.55 - minZ
+
+        // 인덱스에서 뽑은 고정 난수 — 새로고침해도 같은 무더기가 나온다
+        const jitter = (seed: number) => (Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453) % 1
+
         return {
           name: names[i % names.length] ?? '토끼',
           position: [
-            HOLE.edgeX + 0.62 + col * 0.66 + (row % 2) * 0.2 + layer * 0.12,
-            DOLL.radius + 0.1 + layer * 0.62,
-            -HALF_D + 0.85 + row * 0.75,
+            minX + (spanX * (col + 0.5)) / cols + jitter(1) * 0.22,
+            DOLL.radius + 0.15 + layer * 0.66,
+            minZ + (spanZ * (row + 0.5)) / rows + jitter(2) * 0.3,
           ] as [number, number, number],
+          // 옆으로도 기울여 둬야 착지하면서 서로 겹쳐 눕는다
+          rotation: [jitter(3) * 0.9, jitter(4) * Math.PI, jitter(5) * 0.9] as [
+            number,
+            number,
+            number,
+          ],
         }
       }),
     [names],
@@ -367,6 +389,7 @@ function SceneContent({
       if (body.translation().y > FALL_THRESHOLD) return
       collected.current.add(i)
       caught.current += 1
+      burstRef.current?.fire()
       onCatch(caught.current)
     })
   })
@@ -384,6 +407,8 @@ function SceneContent({
           name={doll.name}
           bodyType={physicsReady ? 'dynamic' : 'kinematicPosition'}
           position={doll.position}
+          rotation={doll.rotation}
+          isSquashed={() => heldIndex.current === i}
           ref={(body) => {
             dollRefs.current[i] = body
           }}
@@ -402,16 +427,30 @@ function SceneContent({
       <Gantry beam={beamRef} trolley={trolleyRef} wire={wireRef} />
       <Claw3D ref={clawRef} open={open} />
       <PrizeDoor x={HOLE_CENTER_X} />
+      <PrizeBurst ref={burstRef} position={[HOLE_CENTER_X, 0.45, 0]} />
 
-      {/* 천장 안쪽 조명 라인 */}
+      {/*
+       * 천장 안쪽 조명 라인.
+       * 형광등 모양만 있고 실제로 빛을 내지 않으면 상자 안이 어두워 인형 색이 죽는다.
+       * 등마다 앞뒤로 조명을 두 개씩 놓아 바닥까지 고르게 닿게 한다.
+       */}
       {[-1, 1].map((side) => (
-        <mesh
-          key={side}
-          position={[side * (HALF_W * 0.55), CABINET.height - 0.06, 0]}
-        >
-          <boxGeometry args={[0.09, 0.03, CABINET.depth * 0.86]} />
-          <meshBasicMaterial color="#dff0ff" />
-        </mesh>
+        <group key={side} position={[side * (HALF_W * 0.55), CABINET.height - 0.06, 0]}>
+          <mesh>
+            <boxGeometry args={[0.09, 0.03, CABINET.depth * 0.86]} />
+            <meshBasicMaterial color="#dff0ff" />
+          </mesh>
+          {[-0.28, 0.28].map((offset) => (
+            <pointLight
+              key={offset}
+              position={[0, -0.12, CABINET.depth * offset]}
+              intensity={7}
+              color="#e8f4ff"
+              distance={5.2}
+              decay={1.7}
+            />
+          ))}
+        </group>
       ))}
       <PostFx bloom={0.65} />
     </>

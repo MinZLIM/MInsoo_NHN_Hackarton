@@ -46,3 +46,42 @@ export function bodyColor(emoji: string): string {
 export function accentColor(emoji: string): string {
   return `hsl(${(hashOf(emoji) + 24) % 360}, 68%, 84%)`
 }
+
+/**
+ * 인형 목에 다는 이름표.
+ * 같은 모델을 쓰는 인형이라도 이름이 적혀 있으면 확실히 구분된다.
+ */
+const tagCache = new Map<string, THREE.CanvasTexture>()
+
+export function nameTagTexture(name: string, bg: string): THREE.CanvasTexture {
+  const key = `${name}|${bg}`
+  const cached = tagCache.get(key)
+  if (cached) return cached
+
+  const w = 256
+  const h = 160
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, w, h)
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)'
+  ctx.lineWidth = 10
+  ctx.strokeRect(5, 5, w - 10, h - 10)
+
+  ctx.fillStyle = '#2b2348'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  // 이름이 길면 줄여 넣는다
+  const size = name.length > 4 ? 44 : 60
+  ctx.font = `bold ${size}px 'Pretendard Variable', system-ui`
+  ctx.fillText(name, w / 2, h / 2 + 4)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 4
+  tagCache.set(key, texture)
+  return texture
+}

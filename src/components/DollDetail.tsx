@@ -41,7 +41,7 @@ export function DollDetail({ doll, onClose }: Props) {
                 />
               }
             >
-              <DollViewer name={doll.name} masked={!doll.owned} />
+              <DollViewer name={doll.name} size={doll.size} masked={!doll.owned} />
             </Suspense>
 
             <p className="doll-detail__hint">

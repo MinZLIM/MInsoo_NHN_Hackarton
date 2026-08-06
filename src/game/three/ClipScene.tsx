@@ -265,6 +265,7 @@ function SceneContent({ names, onCatch, onPhaseChange, onVerdict, onReady }: Pro
           <Doll3D
             key={i}
             name={slot.name}
+            size="medium"
             bodyType={releasedIds.includes(i) ? 'dynamic' : 'kinematicPosition'}
             position={slot.spawn}
             ref={(body) => {
