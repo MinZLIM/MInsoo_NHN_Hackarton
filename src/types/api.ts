@@ -94,6 +94,7 @@ export type ApiErrorCode =
   | 'INVALID_TARGET'
   | 'INVALID_AMOUNT'
   | 'NOT_ENOUGH_DOLLS'
+  | 'SIGNUP_FAILED'
   | 'UNKNOWN'
 
 export class ApiError extends Error {
@@ -112,6 +113,7 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   INVALID_TARGET: '대상 유저를 찾을 수 없습니다.',
   INVALID_AMOUNT: '금액을 올바르게 입력해 주세요.',
   NOT_ENOUGH_DOLLS: '보유 수량이 부족합니다.',
+  SIGNUP_FAILED: '가입에 실패했습니다. 닉네임이 이미 사용 중일 수 있으니 다른 닉네임으로 시도해 주세요.',
   UNKNOWN: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 }
 

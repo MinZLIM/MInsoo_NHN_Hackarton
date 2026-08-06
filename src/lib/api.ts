@@ -63,7 +63,18 @@ const supabaseApi: GameApi = {
       password,
       options: { data: { nickname } },
     })
-    if (error) throw toApiError(error)
+    if (!error) return
+
+    /*
+     * 닉네임이 겹치면 profiles의 unique 제약에 걸려 가입 트리거가 실패하고,
+     * Supabase는 "Database error saving new user"라는 500만 돌려준다.
+     * 원인을 구분할 단서가 이것뿐이라 문구로만 안내한다.
+     * 서버에서 중복 닉네임을 별도 코드로 돌려주면 이 분기는 지울 수 있다.
+     */
+    if (error.message?.includes('Database error saving new user')) {
+      throw new ApiError('SIGNUP_FAILED', error.message)
+    }
+    throw toApiError(error)
   },
 
   async signIn(email, password) {
