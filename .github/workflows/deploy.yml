@@ -57,6 +57,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # Pages 쪽 처리가 오래 걸릴 때가 있어 잡 자체의 여유도 넉넉히 준다
+    timeout-minutes: 40
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # 기본 대기 시간이 10분인데 실제 배포에 8~10분이 걸려 계속 초과했다.
+          # (성공한 실행도 8분 19초였다) 30분으로 늘려 여유를 둔다.
+          timeout: 1800000
