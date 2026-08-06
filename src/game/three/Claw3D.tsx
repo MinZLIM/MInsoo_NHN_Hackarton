@@ -8,8 +8,13 @@ interface Props {
   open: boolean
 }
 
-const CLAW_COLOR = '#e8b657'
-const CLAW_DARK = '#a87a2c'
+/*
+ * 어두운 보라 기계 안에서 금색 집게는 배경에 묻혔다.
+ * 밝은 크롬 + 청록 발광으로 바꿔 어디에 있는지 바로 보이게 한다.
+ */
+const CLAW_COLOR = '#eef2ff'
+const CLAW_DARK = '#aab4d8'
+const CLAW_GLOW = '#41e0ff'
 const FINGERS = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3]
 
 /**
@@ -66,13 +71,27 @@ export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
         {/* 몸통 */}
         <mesh castShadow>
           <cylinderGeometry args={[0.19, 0.14, 0.26, 20]} />
-          <meshStandardMaterial color={CLAW_COLOR} metalness={0.8} roughness={0.22} />
+          <meshStandardMaterial
+            color={CLAW_COLOR}
+            metalness={0.85}
+            roughness={0.16}
+            emissive={CLAW_GLOW}
+            emissiveIntensity={0.16}
+          />
         </mesh>
-        {/* 몸통 띠 */}
+        {/* 몸통 띠 — 발광 링이라 멀리서도 위치가 보인다 */}
         <mesh position={[0, -0.1, 0]}>
-          <cylinderGeometry args={[0.16, 0.16, 0.05, 20]} />
-          <meshStandardMaterial color={CLAW_DARK} metalness={0.7} roughness={0.3} />
+          <cylinderGeometry args={[0.17, 0.17, 0.045, 20]} />
+          <meshStandardMaterial
+            color={CLAW_GLOW}
+            emissive={CLAW_GLOW}
+            emissiveIntensity={1.5}
+            toneMapped={false}
+          />
         </mesh>
+
+        {/* 집게를 따라다니는 조명 — 아래 인형까지 비춘다 */}
+        <pointLight position={[0, -0.1, 0]} intensity={3.2} color="#cfefff" distance={2.4} />
 
         {/* 발톱 3개 — 관절이 있어 두 마디로 접힌다 */}
         {FINGERS.map((angle, i) => (
@@ -85,14 +104,24 @@ export const Claw3D = forwardRef<Group, Props>(function Claw3D({ open }, ref) {
             >
               {/* 윗마디 */}
               <mesh position={[0, -0.16, 0]} castShadow>
-                <boxGeometry args={[0.075, 0.34, 0.09]} />
-                <meshStandardMaterial color={CLAW_COLOR} metalness={0.75} roughness={0.24} />
+                <boxGeometry args={[0.08, 0.34, 0.095]} />
+                <meshStandardMaterial color={CLAW_COLOR} metalness={0.82} roughness={0.18} />
               </mesh>
               {/* 아랫마디 — 안쪽으로 꺾인다 */}
               <group position={[0, -0.33, 0]} rotation={[0, 0, 0.75]}>
                 <mesh position={[0, -0.1, 0]} castShadow>
-                  <boxGeometry args={[0.07, 0.22, 0.085]} />
-                  <meshStandardMaterial color={CLAW_DARK} metalness={0.75} roughness={0.24} />
+                  <boxGeometry args={[0.075, 0.22, 0.09]} />
+                  <meshStandardMaterial color={CLAW_DARK} metalness={0.8} roughness={0.2} />
+                </mesh>
+                {/* 발톱 끝 발광 — 어디를 집는지 보인다 */}
+                <mesh position={[0, -0.21, 0]}>
+                  <boxGeometry args={[0.08, 0.05, 0.095]} />
+                  <meshStandardMaterial
+                    color={CLAW_GLOW}
+                    emissive={CLAW_GLOW}
+                    emissiveIntensity={1.8}
+                    toneMapped={false}
+                  />
                 </mesh>
               </group>
             </group>

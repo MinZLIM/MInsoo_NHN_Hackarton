@@ -94,20 +94,27 @@ export const DOLL_MATERIAL = {
     mass: 0.32,
     /** 기하 중심 기준 무게중심 오프셋 — 아래쪽이 무겁다 */
     comY: -0.07,
-    friction: 0.95,
-    restitution: 0.04,
+    friction: 1.1,
+    /** 봉제인형은 튀지 않는다. 떨어지면 그 자리에서 퍽 하고 멈춘다. */
+    restitution: 0,
+    linearDamping: 0.45,
+    angularDamping: 0.85,
   },
   medium: {
     mass: 0.62,
     comY: -0.09,
-    friction: 0.9,
-    restitution: 0.05,
+    friction: 1.05,
+    restitution: 0,
+    linearDamping: 0.5,
+    angularDamping: 0.9,
   },
   large: {
     mass: 1.1,
     comY: -0.11,
-    friction: 0.85,
-    restitution: 0.06,
+    friction: 1,
+    restitution: 0,
+    linearDamping: 0.55,
+    angularDamping: 0.95,
   },
 } as const
 

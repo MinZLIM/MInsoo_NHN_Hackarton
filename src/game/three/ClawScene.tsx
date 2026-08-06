@@ -70,6 +70,12 @@ function SceneContent({
   const dollRefs = useRef<(RapierRigidBody | null)[]>([])
 
   const [open, setOpen] = useState(true)
+  /**
+   * 콜라이더는 강체보다 늦게 붙는다. 모델을 읽어 볼록 껍질을 계산해야 하기 때문이다.
+   * 그 사이 인형을 그냥 두면 충돌 없이 자유낙하해 바닥을 뚫고 사라진다.
+   * 준비될 때까지 고정해 두었다가 한꺼번에 물리에 맡긴다.
+   */
+  const [physicsReady, setPhysicsReady] = useState(false)
 
   // 렌더를 유발하지 않도록 진행 상태는 전부 ref에 둔다. 화면 갱신은 phase 변화 시에만.
   const phase = useRef<ClawPhase>('aim')
@@ -244,6 +250,15 @@ function SceneContent({
     const delta = Math.min(rawDelta, 1 / 30)
     const p = pos.current
 
+    // 모든 인형에 콜라이더가 붙은 뒤에야 낙하를 시작한다
+    if (!physicsReady) {
+      const bodies = dollRefs.current.filter(Boolean)
+      const ready =
+        bodies.length === DOLL.count && bodies.every((b) => (b as RapierRigidBody).numColliders() > 0)
+      if (ready) setPhysicsReady(true)
+      return
+    }
+
     switch (phase.current) {
       case 'aim': {
         if (control === 'swing') {
@@ -336,6 +351,7 @@ function SceneContent({
     clawBodyRef.current?.setNextKinematicTranslation({ x: p.x, y: p.y - 0.42, z: p.z })
     if (clawRef.current) clawRef.current.position.set(p.x, p.y, p.z)
 
+
     // 크로스빔은 앞뒤로, 트롤리는 좌우로, 와이어는 그 사이를 잇는다
     if (beamRef.current) beamRef.current.position.z = p.z
     if (trolleyRef.current) trolleyRef.current.position.set(p.x, 0, p.z)
@@ -366,6 +382,7 @@ function SceneContent({
         <Doll3D
           key={i}
           name={doll.name}
+          bodyType={physicsReady ? 'dynamic' : 'kinematicPosition'}
           position={doll.position}
           ref={(body) => {
             dollRefs.current[i] = body

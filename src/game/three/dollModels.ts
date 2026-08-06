@@ -85,6 +85,25 @@ const EXACT: Record<string, string> = {
   외계인: 'bee',
 }
 
+/**
+ * 인형마다 다른 겉모습을 만든다.
+ * 모델이 24종뿐이라 같은 모델이 여러 인형에 쓰인다. 목도리 색과 크기를 이름에서
+ * 뽑아 붙이면 45종이 서로 구분된다.
+ */
+export function dollLook(dollName: string) {
+  const h = hash(dollName)
+  return {
+    /** 목도리 색 */
+    ribbon: `hsl(${h % 360}, 78%, 62%)`,
+    /** 이름표 색 */
+    tag: `hsl(${(h >> 3) % 360}, 70%, 78%)`,
+    /** 크기 편차 — 무더기가 단조로워 보이지 않게 한다 */
+    scale: 0.92 + ((h >> 6) % 17) / 100,
+    /** 목도리를 매지 않는 인형도 있어야 자연스럽다 */
+    hasRibbon: h % 5 !== 0,
+  }
+}
+
 function hash(text: string) {
   let h = 0
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0

@@ -1,9 +1,9 @@
 import { forwardRef, useCallback, useMemo } from 'react'
 import { RigidBody, type RapierRigidBody } from '@react-three/rapier'
 import { useGLTF } from '@react-three/drei'
-import { Box3, Vector3, type Object3D } from 'three'
+import { Box3, Mesh, MeshStandardMaterial, Vector3, type Object3D } from 'three'
 import { DOLL, DOLL_MATERIAL } from './layout'
-import { modelLoadingManager, modelUrlFor } from './dollModels'
+import { dollLook, modelLoadingManager, modelUrlFor } from './dollModels'
 
 interface Props {
   /** 인형 이름 — 어떤 모델을 쓸지 결정한다 */
@@ -62,12 +62,14 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
   })
 
   // 인스턴스마다 별도 사본이 필요하다. 원본을 그대로 쓰면 마지막 것만 보인다.
-  const model = useMemo(() => {
+  const look = useMemo(() => dollLook(name), [name])
+
+  const { model, ribbonY, ribbonR } = useMemo(() => {
     const clone = scene.clone(true)
 
     const box = new Box3().setFromObject(clone)
     const size = box.getSize(new Vector3())
-    const scale = TARGET_SIZE / Math.max(size.x, size.y, size.z, 0.001)
+    const scale = (TARGET_SIZE * look.scale) / Math.max(size.x, size.y, size.z, 0.001)
     clone.scale.setScalar(scale)
 
     // 바닥이 원점에 오도록 내려 놓는다 (구 콜라이더 중심과 맞추기 위함)
@@ -77,9 +79,22 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
     clone.traverse((child: Object3D) => {
       child.castShadow = true
       child.receiveShadow = true
+      // 봉제인형은 빛을 되쏘지 않는다. 금속기를 빼고 거칠게 둬야 천처럼 보인다.
+      const mesh = child as Mesh
+      const mat = mesh.material as MeshStandardMaterial | undefined
+      if (mat && 'roughness' in mat) {
+        mat.roughness = 0.95
+        mat.metalness = 0
+      }
     })
-    return clone
-  }, [scene])
+
+    return {
+      model: clone,
+      // 목도리는 몸통 위쪽 1/3 지점에 두른다
+      ribbonY: size.y * scale * 0.12,
+      ribbonR: Math.max(size.x, size.z) * scale * 0.42,
+    }
+  }, [scene, look.scale])
 
   // 종류마다 조금씩 다른 각도로 놓여 있어야 무더기가 자연스럽다
   const rotation = useMemo(
@@ -107,10 +122,24 @@ export const Doll3D = forwardRef<RapierRigidBody, Props>(function Doll3D(
       density={0}
       friction={mat.friction}
       restitution={mat.restitution}
-      linearDamping={0.15}
-      angularDamping={0.35}
+      linearDamping={mat.linearDamping}
+      angularDamping={mat.angularDamping}
     >
       <primitive object={model} />
+
+      {/* 목도리와 이름표 — 같은 모델을 써도 인형마다 달라 보이게 한다 */}
+      {look.hasRibbon ? (
+        <group position={[0, ribbonY, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <torusGeometry args={[ribbonR, ribbonR * 0.16, 8, 20]} />
+            <meshStandardMaterial color={look.ribbon} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, -ribbonR * 0.35, ribbonR * 0.95]} castShadow>
+            <boxGeometry args={[ribbonR * 0.5, ribbonR * 0.62, ribbonR * 0.14]} />
+            <meshStandardMaterial color={look.tag} roughness={0.6} />
+          </mesh>
+        </group>
+      ) : null}
     </RigidBody>
   )
 })
