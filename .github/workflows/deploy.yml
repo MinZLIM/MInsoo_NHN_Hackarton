@@ -56,16 +56,36 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || steps.retry.outputs.page_url }}
+      url: >-
+        ${{ steps.deployment.outputs.page_url
+            || steps.retry.outputs.page_url
+            || steps.final.outputs.page_url }}
     timeout-minutes: 40
     steps:
-      # Pages 처리가 10분을 넘겨 실패하는 일이 잦다. (08.04에는 16초였는데 08.06에는
-      # 8~10분이 걸린다. 산출물은 4.3 -> 5.0 MB로 거의 그대로라 우리 쪽 문제는 아니다.)
-      # deploy-pages의 대기 시간 상한이 10분이라 늘릴 수 없으므로, 한 번 더 시도한다.
+      # Pages 배포는 두 가지 이유로 실패한다.
+      #   1) 처리가 10분을 넘긴다. deploy-pages의 대기 상한이 10분이라 늘릴 수 없다.
+      #   2) GitHub Pages 쪽 장애. 이때는 몇 초 만에 바로 실패한다.
+      #
+      # 그래서 실패하면 '기다렸다가' 다시 시도한다. 08.06 장애 때는 실패 4초 뒤에
+      # 재시도가 붙어서 같이 죽었다. 간격 없는 재시도는 재시도가 아니다.
       - id: deployment
         uses: actions/deploy-pages@v4
         continue-on-error: true
 
+      - name: Wait before retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 90
+
       - id: retry
         if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before last attempt
+        if: steps.deployment.outcome == 'failure' && steps.retry.outcome == 'failure'
+        run: sleep 180
+
+      # 마지막 시도는 continue-on-error를 두지 않는다. 여기서도 실패하면 잡을 실패시킨다.
+      - id: final
+        if: steps.deployment.outcome == 'failure' && steps.retry.outcome == 'failure'
         uses: actions/deploy-pages@v4
