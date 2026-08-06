@@ -1363,6 +1363,50 @@ p {
   }
 }
 
+/* 시점 전환 버튼 — 캔버스 위에 얹는다 */
+.view-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 9, 26, 0.62);
+  backdrop-filter: blur(8px);
+}
+.view-switch button {
+  padding: 5px 11px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.view-switch button:hover {
+  color: var(--text);
+}
+.view-switch button.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .view-switch {
+    top: 6px;
+    right: 6px;
+  }
+  .view-switch button {
+    padding: 4px 8px;
+  }
+}
+
 /* 판정 플래시 */
 .stage__flash {
   position: absolute;

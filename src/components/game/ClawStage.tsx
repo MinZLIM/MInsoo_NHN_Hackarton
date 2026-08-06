@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Joystick } from '@/components/game/Joystick'
 import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 import { ClawScene, type ClawPhase, type ClawSceneHandle } from '@/game/three/ClawScene'
+import { CameraRig, VIEWS, type ViewKey } from '@/game/three/CameraRig'
 import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 
@@ -24,6 +25,7 @@ export function ClawStage({ onEnd }: Props) {
   const [phase, setPhase] = useState<ClawPhase>('aim')
   const [remain, setRemain] = useState(TIME_ATTACK_SEC)
   const [ended, setEnded] = useState(false)
+  const [view, setView] = useState<ViewKey>('front')
 
   const caughtRef = useRef(0)
   caughtRef.current = caught
@@ -108,16 +110,29 @@ export function ClawStage({ onEnd }: Props) {
       </div>
 
       <div className="stage__cabinet stage__cabinet--3d">
+        {/* 시점 전환 — 정면만으로는 집게와 인형의 앞뒤 거리가 잘 안 보인다 */}
+        <div className="view-switch" role="group" aria-label="보는 위치">
+          {(Object.keys(VIEWS) as ViewKey[]).map((key) => (
+            <button
+              key={key}
+              className={view === key ? 'is-active' : ''}
+              aria-pressed={view === key}
+              onClick={() => setView(key)}
+            >
+              {VIEWS[key].label}
+            </button>
+          ))}
+        </div>
+
         <Canvas
           shadows
           dpr={[1, 2]}
           camera={{ position: [0, 3.1, 7.5], fov: 45 }}
           gl={{ antialias: true }}
-          // 기본 카메라는 원점을 보므로 기계 중앙 높이로 시선을 올린다
-          onCreated={({ camera }) => camera.lookAt(0, 1.95, 0)}
         >
           <color attach="background" args={['#151230']} />
           <fog attach="fog" args={['#151230', 16, 30]} />
+          <CameraRig view={view} />
           <ClawScene
             names={SMALL_NAMES}
             control="manual"
@@ -145,6 +160,8 @@ export function ClawStage({ onEnd }: Props) {
 
       <p className="stage__hint">
         조이스틱으로 집게를 옮기고 빨간 버튼으로 내립니다. (키보드 ← → ↑ ↓ / Space)
+        <br />
+        앞뒤 거리가 헷갈리면 오른쪽 위 <strong>시점 버튼</strong>으로 위·옆에서 확인하세요.
       </p>
     </div>
   )
