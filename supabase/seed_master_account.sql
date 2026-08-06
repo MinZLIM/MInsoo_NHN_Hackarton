@@ -27,6 +27,15 @@ begin
   on conflict (user_id, doll_id)
   do update set count = 1;
 
+  -- Demo account also gets a stack of every game item (needs 202608070001).
+  if to_regclass('public.user_items') is not null then
+    insert into public.user_items (user_id, item_id, count)
+    select v_user_id, i.id, 9
+      from public.items i
+    on conflict (user_id, item_id)
+    do update set count = 9, updated_at = now();
+  end if;
+
   update public.user_ranks
      set tier = 'challenger'::public.tier_name,
          promote_cnt = 0,

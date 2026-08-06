@@ -46,6 +46,7 @@ Authentication → Sign In / Providers → Email
 
 ```text
 supabase/migrations/202608060001_complete_backend.sql
+supabase/migrations/202608070001_game_items.sql
 ```
 
 Supabase Dashboard에서:
@@ -54,7 +55,10 @@ Supabase Dashboard에서:
 SQL Editor → New query → 붙여넣기 → Run
 ```
 
-이 파일은 새 프로젝트에 **한 번만** 실행합니다. 중간에 오류가 나면 명시적 트랜잭션이 롤백되므로 오류를 수정한 뒤 다시 실행할 수 있습니다.
+두 파일은 **위 순서대로 따로** 실행합니다. 이미 `202608060001`을 돌린 프로젝트라면
+`202608070001_game_items.sql`만 추가로 실행하면 됩니다 (기존 데이터는 건드리지 않습니다).
+
+각 파일은 새 프로젝트에 **한 번만** 실행합니다. 중간에 오류가 나면 명시적 트랜잭션이 롤백되므로 오류를 수정한 뒤 다시 실행할 수 있습니다.
 
 성공 후 `Table Editor`에서 다음 테이블을 확인합니다.
 
