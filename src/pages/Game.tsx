@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '@/components/AppHeader'
 import { ClawStage } from '@/components/game/ClawStage'
@@ -13,13 +13,21 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { toast } from '@/store/useToastStore'
 import {
   ENTRY_COST,
+  ITEM_EFFECT,
   MODE_DIFFICULTY,
   MODE_LABEL,
   SCORE_PER_DOLL,
+  SHOP_ITEMS,
   TIER_LABEL,
   formatGold,
 } from '@/lib/constants'
-import { messageOf, type FinishGameResult, type GameMode } from '@/types/api'
+import {
+  messageOf,
+  type FinishGameResult,
+  type GameMode,
+  type ItemId,
+  type ItemStock,
+} from '@/types/api'
 import { playSfx } from '@/lib/sfx'
 
 /**
@@ -48,26 +56,71 @@ export function Game() {
   const [result, setResult] = useState<FinishGameResult | null>(null)
   const [settleError, setSettleError] = useState<string | null>(null)
 
+  const [inventory, setInventory] = useState<ItemStock[] | null>(null)
+  /** 입장 창에서 켜 둔 아이템 */
+  const [picked, setPicked] = useState<ItemId[]>([])
+  /** 서버가 확정해 준, 이번 판에 실제로 소모된 아이템 */
+  const [applied, setApplied] = useState<ItemId[]>([])
+
+  // 보유 아이템은 화면이 넘어갈 때마다 다시 읽는다 (구매·소모가 바로 반영되도록)
+  useEffect(() => {
+    let alive = true
+    api
+      .getInventory()
+      .then((list) => alive && setInventory(list))
+      .catch(() => alive && setInventory([]))
+    return () => {
+      alive = false
+    }
+  }, [step])
+
+  /** 이 모드에서 쓸 수 있고 한 개라도 갖고 있는 아이템 */
+  const usable = useMemo(() => {
+    const stock = Object.fromEntries((inventory ?? []).map((s) => [s.id, s.count]))
+    return SHOP_ITEMS.filter((item) => item.modes.includes(mode)).map((item) => ({
+      ...item,
+      count: stock[item.id] ?? 0,
+    }))
+  }, [inventory, mode])
+
+  const bonusSec = applied.includes('extra_time') ? ITEM_EFFECT.extraTimeSec : 0
+  const gripBoost = applied.includes('grip_boost') ? ITEM_EFFECT.gripBoost : 1
+
   const cost = ENTRY_COST[mode]
   const gold = profile?.gold ?? 0
   const affordable = gold >= cost
 
   const openConfirm = (next: GameMode) => {
     setMode(next)
+    setPicked([])
     setStep('confirm')
+  }
+
+  const toggleItem = (id: ItemId, available: boolean) => {
+    if (!available) return
+    playSfx('click')
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   const start = async () => {
     setStarting(true)
     playSfx('coin')
     try {
-      const started = await api.startGame(mode)
+      const started = await api.startGame(mode, picked)
       setSessionId(started.session_id)
+      setApplied(started.items_used)
       setGold(started.gold_after)
       setCaught(0)
       setResult(null)
       setSettleError(null)
       setStep('playing')
+      if (started.items_used.length > 0) {
+        setInventory((prev) =>
+          (prev ?? []).map((s) =>
+            started.items_used.includes(s.id) ? { ...s, count: s.count - 1 } : s,
+          ),
+        )
+      }
     } catch (err) {
       toast.error(messageOf(err))
       setStep('select')
@@ -129,9 +182,9 @@ export function Game() {
         mode === 'large' ? (
           <TimingStage onEnd={onGameEnd} />
         ) : mode === 'medium' ? (
-          <ClipStage onEnd={onGameEnd} />
+          <ClipStage onEnd={onGameEnd} bonusSec={bonusSec} />
         ) : (
-          <ClawStage onEnd={onGameEnd} />
+          <ClawStage onEnd={onGameEnd} bonusSec={bonusSec} gripBoost={gripBoost} />
         )
       ) : null}
 
@@ -167,7 +220,7 @@ export function Game() {
               취소
             </Button>
             <Button onClick={start} loading={starting} disabled={!affordable}>
-              {affordable ? '입장하기' : '골드 부족'}
+              {affordable ? '게임 시작' : '골드 부족'}
             </Button>
           </>
         }
@@ -180,6 +233,46 @@ export function Game() {
         </p>
         {!affordable ? (
           <p className="field__error">골드가 부족합니다. 상점에서 인형을 판매해 보세요.</p>
+        ) : null}
+
+        {/* 아이템 사용 선택 — 하나도 켜지 않아도 그냥 시작할 수 있다 */}
+        {usable.length > 0 ? (
+          <div className="item-picker">
+            <p className="item-picker__title">사용할 아이템</p>
+            <ul className="item-picker__list">
+              {usable.map((item) => {
+                const available = item.count > 0
+                const on = picked.includes(item.id)
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={`item-chip${on ? ' is-on' : ''}${available ? '' : ' is-empty'}`}
+                      aria-pressed={on}
+                      disabled={!available}
+                      onClick={() => toggleItem(item.id, available)}
+                    >
+                      <span className="item-chip__icon" aria-hidden>
+                        {item.icon}
+                      </span>
+                      <span className="item-chip__body">
+                        <span className="item-chip__name">{item.name}</span>
+                        <span className="item-chip__desc">{item.description}</span>
+                      </span>
+                      <span className="item-chip__count">
+                        {available ? `x${item.count}` : '보유 없음'}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="item-picker__note">
+              {picked.length > 0
+                ? '선택한 아이템은 시작과 동시에 1개씩 소모됩니다.'
+                : '아이템 없이 시작할 수 있습니다.'}
+            </p>
+          </div>
         ) : null}
       </Modal>
 

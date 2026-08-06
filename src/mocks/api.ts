@@ -2,10 +2,13 @@ import type { GameApi } from '@/lib/api'
 import {
   ApiError,
   type AcquiredDoll,
+  type BuyItemResult,
   type CollectionEntry,
   type DollSize,
   type FinishGameResult,
   type GameMode,
+  type ItemId,
+  type ItemStock,
   type Leaderboard,
   type Profile,
   type RankMode,
@@ -14,7 +17,7 @@ import {
   type TierName,
   type TransferResult,
 } from '@/types/api'
-import { ENTRY_COST, SCORE_PER_DOLL, TIER_LABEL } from '@/lib/constants'
+import { ENTRY_COST, ITEM_BY_ID, SCORE_PER_DOLL, SHOP_ITEMS, TIER_LABEL } from '@/lib/constants'
 import { MOCK_DOLLS } from './dolls'
 
 /**
@@ -40,6 +43,8 @@ interface MockState {
   profile: Profile
   /** doll_id → 보유 수량 */
   owned: Record<number, number>
+  /** item_id → 보유 수량 */
+  items: Partial<Record<ItemId, number>>
   sessions: Record<string, { mode: GameMode; cost: number; done: boolean }>
   ranks: Record<RankMode, MockRank>
 }
@@ -129,6 +134,7 @@ const initialState = (): MockState => ({
   signedIn: false,
   profile: { id: 'mock-user-0001', nickname: '테스터', gold: 10000 },
   owned: { ...STARTER_DOLLS },
+  items: {},
   sessions: {},
   ranks: {
     small: { tier: 'bronze', best: 0, promoteCnt: 0, demoteCnt: 0 },
@@ -145,6 +151,8 @@ const masterState = (): MockState => ({
     gold: MASTER_ACCOUNT.gold,
   },
   owned: allDolls(),
+  // 시연용이라 아이템도 넉넉히 쥐여 준다
+  items: { grip_boost: 9, extra_time: 9 },
   sessions: {},
   ranks: {
     small: { tier: 'challenger', best: 220, promoteCnt: 0, demoteCnt: 0 },
@@ -223,9 +231,19 @@ export const mockApi: GameApi = {
     return delay(state.signedIn ? { ...state.profile } : null)
   },
 
-  async startGame(mode) {
+  async startGame(mode, useItems = []) {
     const cost = ENTRY_COST[mode]
     if (state.profile.gold < cost) throw new ApiError('INSUFFICIENT_GOLD')
+
+    // 아이템은 골드를 깎기 전에 전부 검사한다. 중간에 실패하면 입장료만 날아간다.
+    const wanted = [...new Set(useItems)]
+    for (const id of wanted) {
+      if (!ITEM_BY_ID[id]?.modes.includes(mode)) throw new ApiError('ITEM_NOT_ALLOWED')
+      if ((state.items[id] ?? 0) < 1) throw new ApiError('NOT_ENOUGH_ITEMS')
+    }
+    wanted.forEach((id) => {
+      state.items[id] = (state.items[id] ?? 0) - 1
+    })
 
     const sessionId = `mock-session-${Object.keys(state.sessions).length + 1}`
     state.sessions[sessionId] = { mode, cost, done: false }
@@ -235,6 +253,30 @@ export const mockApi: GameApi = {
       session_id: sessionId,
       mode,
       cost,
+      gold_after: state.profile.gold,
+      items_used: wanted,
+    })
+  },
+
+  async getInventory() {
+    return delay<ItemStock[]>(
+      SHOP_ITEMS.map((item) => ({ id: item.id, count: state.items[item.id] ?? 0 })),
+    )
+  },
+
+  async buyItem(itemId, count) {
+    const item = ITEM_BY_ID[itemId]
+    if (!item || count <= 0) throw new ApiError('INVALID_AMOUNT')
+
+    const total = item.price * count
+    if (state.profile.gold < total) throw new ApiError('INSUFFICIENT_GOLD')
+
+    state.items[itemId] = (state.items[itemId] ?? 0) + count
+    setGold(state.profile.gold - total)
+
+    return delay<BuyItemResult>({
+      id: itemId,
+      count: state.items[itemId]!,
       gold_after: state.profile.gold,
     })
   },

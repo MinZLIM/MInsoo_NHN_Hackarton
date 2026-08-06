@@ -1905,3 +1905,153 @@ p {
     padding: 24px;
   }
 }
+
+/* ---------- 상점 아이템 (REQ-SHOP-02) ---------- */
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.item-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0));
+}
+.item-card__icon {
+  font-size: 30px;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(124, 92, 255, 0.16);
+  flex: none;
+}
+.item-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.item-card__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.item-card__own {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.item-card__desc {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.item-card__modes {
+  font-size: 12px;
+  color: #a88bff;
+}
+
+/* ---------- 입장 시 아이템 선택 ---------- */
+.item-picker {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.item-picker__title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.item-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.item-picker__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.item-chip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.item-chip:hover:not(:disabled) {
+  border-color: rgba(124, 92, 255, 0.6);
+}
+/* 켜진 아이템은 한눈에 보이도록 테두리와 배경을 함께 바꾼다 */
+.item-chip.is-on {
+  border-color: #8b6bff;
+  background: rgba(124, 92, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(139, 107, 255, 0.5), 0 6px 18px rgba(80, 50, 190, 0.28);
+}
+.item-chip.is-empty {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.item-chip__icon {
+  font-size: 22px;
+  flex: none;
+}
+.item-chip__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.item-chip__name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.item-chip__desc {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.item-chip__count {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.item-chip.is-on .item-chip__count {
+  color: #d6c8ff;
+}
+
+/* 게임 화면에서 적용 중인 아이템 표시 */
+.stage__buff {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffd76a;
+  margin-right: 10px;
+}

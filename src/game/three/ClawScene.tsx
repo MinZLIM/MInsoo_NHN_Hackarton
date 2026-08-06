@@ -33,6 +33,8 @@ interface Props {
   /** 기계에 넣을 인형 이름 목록 */
   names: string[]
   control: ClawControl
+  /** '집게 강화' 아이템의 파지력 배율. 1이면 아이템 없음. */
+  gripBoost?: number
   onCatch: (total: number) => void
   onPhaseChange: (phase: ClawPhase) => void
   /** 조작 핸들을 바깥(HUD 버튼)으로 넘긴다 */
@@ -56,6 +58,7 @@ export function ClawScene(props: Props) {
 function SceneContent({
   names,
   control,
+  gripBoost = 1,
   onCatch,
   onPhaseChange,
   onReady,
@@ -210,7 +213,9 @@ function SceneContent({
     heldIndex.current = index
     graceTimer.current = CLAW.gripGraceSec
     gripTorque.current =
-      CLAW.gripTorque * (1 - CLAW.gripTorqueJitter + Math.random() * CLAW.gripTorqueJitter * 2)
+      CLAW.gripTorque *
+      (1 - CLAW.gripTorqueJitter + Math.random() * CLAW.gripTorqueJitter * 2) *
+      gripBoost
     return true
   }
 

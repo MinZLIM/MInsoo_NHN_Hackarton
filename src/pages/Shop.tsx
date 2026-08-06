@@ -8,12 +8,21 @@ import { useAsync } from '@/hooks/useAsync'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/useAuthStore'
 import { toast } from '@/store/useToastStore'
-import { SELL_PRICE, SIZE_LABEL, formatGold } from '@/lib/constants'
-import { messageOf, type CollectionEntry } from '@/types/api'
+import {
+  MODE_LABEL,
+  SELL_PRICE,
+  SHOP_ITEMS,
+  SIZE_LABEL,
+  formatGold,
+} from '@/lib/constants'
+import { messageOf, type CollectionEntry, type ItemStock } from '@/types/api'
 
-type Tab = 'sell' | 'transfer'
+type Tab = 'sell' | 'item' | 'transfer'
 
-/** 상점 — 인형 판매(REQ-SHOP-01)와 유저 간 송금(REQ-SHOP-03). 아이템 구매는 P2. */
+/**
+ * 상점 — 인형 판매(REQ-SHOP-01) · 아이템 구매(REQ-SHOP-02) · 송금(REQ-SHOP-03).
+ * 산 아이템은 게임 방에 들어갈 때 쓸지 고른다. (pages/Game)
+ */
 export function Shop() {
   const [tab, setTab] = useState<Tab>('sell')
 
@@ -32,6 +41,14 @@ export function Shop() {
         </button>
         <button
           role="tab"
+          aria-selected={tab === 'item'}
+          className={tab === 'item' ? 'is-active' : ''}
+          onClick={() => setTab('item')}
+        >
+          아이템
+        </button>
+        <button
+          role="tab"
           aria-selected={tab === 'transfer'}
           className={tab === 'transfer' ? 'is-active' : ''}
           onClick={() => setTab('transfer')}
@@ -40,12 +57,84 @@ export function Shop() {
         </button>
       </div>
 
-      {tab === 'sell' ? <SellTab /> : <TransferTab />}
+      {tab === 'sell' ? <SellTab /> : tab === 'item' ? <ItemTab /> : <TransferTab />}
+    </div>
+  )
+}
+
+function ItemTab() {
+  const setGold = useAuthStore((s) => s.setGold)
+  const gold = useAuthStore((s) => s.profile?.gold ?? 0)
+  const { data, loading, error, reload } = useAsync<ItemStock[]>(() => api.getInventory(), [])
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const stock = useMemo(
+    () => Object.fromEntries((data ?? []).map((s) => [s.id, s.count])),
+    [data],
+  )
+
+  const buy = async (id: ItemStock['id'], name: string) => {
+    setBusy(id)
+    try {
+      const result = await api.buyItem(id, 1)
+      setGold(result.gold_after)
+      toast.success(`${name}을(를) 구매했습니다. (보유 ${result.count}개)`)
+      reload()
+    } catch (err) {
+      toast.error(messageOf(err))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (loading) return <Loading label="아이템을 불러오는 중..." />
+  if (error)
+    return (
+      <div className="empty">
+        <p>{error}</p>
+        <Button variant="ghost" size="sm" onClick={reload}>
+          다시 시도
+        </Button>
+      </div>
+    )
+
+  return (
+    <>
+      <ul className="item-list">
+        {SHOP_ITEMS.map((item) => {
+          const owned = stock[item.id] ?? 0
+          return (
+            <li key={item.id} className="item-card">
+              <span className="item-card__icon" aria-hidden>
+                {item.icon}
+              </span>
+              <span className="item-card__body">
+                <span className="item-card__name">
+                  {item.name}
+                  <em className="item-card__own">보유 {owned}개</em>
+                </span>
+                <span className="item-card__desc">{item.description}</span>
+                <span className="item-card__modes">
+                  {item.modes.map((m) => MODE_LABEL[m]).join(' · ')} 전용
+                </span>
+              </span>
+              <Button
+                size="sm"
+                loading={busy === item.id}
+                disabled={gold < item.price}
+                onClick={() => void buy(item.id, item.name)}
+              >
+                {formatGold(item.price)} G
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
 
       <p className="shop__note">
-        🚧 버프 아이템 구매(REQ-SHOP-02)는 이번 일정에서 후순위로 미뤘습니다.
+        구매한 아이템은 게임 방에 들어갈 때 사용 여부를 고를 수 있습니다.
       </p>
-    </div>
+    </>
   )
 }
 

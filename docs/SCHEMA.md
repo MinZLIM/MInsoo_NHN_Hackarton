@@ -107,12 +107,31 @@ create type ledger_reason as enum ('signup', 'game_entry', 'doll_sell', 'item_bu
 | `best_score` | `int` not null default 0 | 리더보드 정렬 기준 |
 | `updated_at` | `timestamptz` | |
 
-### 2.7 `items` / `user_items` — 버프 아이템 *(P2, 여유 시)*
+### 2.7 `items` / `user_items` — 게임 아이템 (REQ-SHOP-02)
+FE는 이미 아이템 2종을 붙여 두었습니다. mock에서는 동작하며, **BE 구현 전까지 실서버에서는 아이템 사용이 실패**합니다.
+
 | `items` 컬럼 | 타입 | 비고 |
 | :--- | :--- | :--- |
-| `id` / `name` / `price` | `int` / `text` / `int` | |
-| `effect_type` | `text` | `claw_power` \| `extra_time` (REQ-SHOP-02) |
-| `effect_value` | `int` | 예: `extra_time = 15` (초) |
+| `id` | `text` primary key | `grip_boost` \| `extra_time` — FE가 이 문자열을 그대로 씁니다 |
+| `name` | `text` | |
+| `price` | `int` | |
+| `modes` | `game_mode[]` | 쓸 수 있는 모드. 이 밖의 모드에 넣으면 `ITEM_NOT_ALLOWED` |
+
+| `user_items` 컬럼 | 타입 | 비고 |
+| :--- | :--- | :--- |
+| `user_id` | `uuid` → `profiles.id` | |
+| `item_id` | `text` → `items.id` | |
+| `count` | `int` not null default 0 | `(user_id, item_id)` unique |
+
+**아이템 정의 (FE `src/lib/constants.ts`의 `SHOP_ITEMS`와 일치해야 합니다)**
+
+| id | 이름 | 가격 | 사용 가능 모드 | 효과 |
+| :--- | :--- | --: | :--- | :--- |
+| `grip_boost` | 집게 강화 | 1,500 | `small` | 집게가 버티는 토크 × **1.6** |
+| `extra_time` | 시간 연장 | 1,200 | `small`, `medium` | 제한 시간 **+20초** |
+
+> 효과 계산은 전부 FE(클라)에서 합니다. 서버는 **보유·소모·모드 검증**만 책임집니다.
+> 점수는 어차피 `finish_game`의 획득 개수로만 정산되므로 조작 위험이 늘지 않습니다.
 
 ### 2.8 `gold_ledger` — 거래 원장 *(P2, 감사 추적)*
 `id`, `user_id`, `delta`(±), `reason`(`ledger_reason`), `ref_id`, `created_at`
@@ -145,15 +164,21 @@ create type ledger_reason as enum ('signup', 'game_entry', 'doll_sell', 'item_bu
 | `INVALID_TARGET` | 송금 대상 없음 / 자기 자신 | 입력 필드 에러 |
 | `INVALID_AMOUNT` | 0 이하 금액 | 입력 필드 에러 |
 | `NOT_ENOUGH_DOLLS` | 보유 인형 부족 | "보유 수량이 부족합니다" |
+| `NOT_ENOUGH_ITEMS` | 보유 아이템 부족 | "아이템이 부족합니다" |
+| `ITEM_NOT_ALLOWED` | 이 모드에서 못 쓰는 아이템 | "이 모드에서는 사용할 수 없는 아이템입니다" |
 
-### 4.1 `start_game(p_mode game_mode)` → `json`
-입장 비용 검증 및 차감 후 세션을 발급합니다.
+### 4.1 `start_game(p_mode game_mode, p_items text[] default '{}')` → `json`
+입장 비용 검증 및 차감 후 세션을 발급합니다. `p_items`에 담긴 아이템을 **1개씩 소모**합니다.
 ```jsonc
 // 성공 응답
-{ "session_id": "uuid", "mode": "small", "cost": 1000, "gold_after": 9000 }
+{ "session_id": "uuid", "mode": "small", "cost": 1000, "gold_after": 9000,
+  "items_used": ["grip_boost", "extra_time"] }
 ```
-- 실패: `INSUFFICIENT_GOLD`
-- **차감과 세션 생성은 하나의 트랜잭션**
+- 실패: `INSUFFICIENT_GOLD` / `NOT_ENOUGH_ITEMS` / `ITEM_NOT_ALLOWED`
+- **차감 · 아이템 소모 · 세션 생성은 하나의 트랜잭션.** 아이템 검증은 골드를 깎기 전에 전부 끝내야 합니다.
+- `items_used`는 **실제로 소모된 것만** 담습니다. FE는 이 값만 보고 효과를 적용합니다.
+- ⚠️ `p_items`는 **기본값이 있는 선택 인자**여야 합니다. 아이템을 고르지 않은 FE는
+  이 인자를 아예 보내지 않습니다 (기존 호출과 호환).
 
 ### 4.2 `finish_game(p_session_id uuid, p_caught int)` → `json`
 FE는 **획득 인형 목록이 아니라 "획득 개수"만** 보냅니다. 어떤 인형이 나올지는 **서버가 `drop_weight` 기반으로 추첨**합니다. (클라 조작 방어)
@@ -201,10 +226,20 @@ FE는 **획득 인형 목록이 아니라 "획득 개수"만** 보냅니다. 어
 ```
 - `p_mode`는 `small` | `medium`만 허용 (REQ-RANK-01)
 
-### 4.7 `buy_item(p_item_id int)` → `json` *(P2)*
+### 4.7 `get_inventory()` → `json[]`
+보유 수량이 0인 아이템도 포함해서 `items`의 모든 행을 내려줍니다. 상점의 잔량 표시와
+게임 입장 창의 선택 목록이 이 값을 씁니다.
 ```jsonc
-{ "item_id": 1, "gold_after": 8500 }
+[{ "id": "grip_boost", "count": 2 }, { "id": "extra_time", "count": 0 }]
 ```
+
+### 4.8 `buy_item(p_item_id text, p_count int default 1)` → `json`
+```jsonc
+// count는 구매 후 총 보유 수량
+{ "id": "grip_boost", "count": 3, "gold_after": 8500 }
+```
+- 실패: `INSUFFICIENT_GOLD` / `INVALID_AMOUNT`
+- 가격은 서버의 `items.price`를 기준으로 합니다. FE가 보낸 금액은 믿지 않습니다.
 
 ---
 

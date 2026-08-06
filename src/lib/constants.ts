@@ -1,4 +1,4 @@
-import type { DollSize, GameMode, TierName } from '@/types/api'
+import type { DollSize, GameMode, ItemId, TierName } from '@/types/api'
 
 /** docs/SCHEMA.md §3 상수표. 값을 바꿀 때는 반드시 BE와 함께 바꾼다. */
 
@@ -41,6 +41,53 @@ export const LARGE_TOLERANCE_SEC = 0.15
  *   중형 — 같은 파일의 CLIP (toleranceRad / spinSpeed)
  *   대형 — 이 파일의 LARGE_TOLERANCE_SEC
  */
+
+/**
+ * 상점 아이템 (REQ-SHOP-02).
+ *
+ * 가격과 효과는 서버와 반드시 같아야 한다. 소모는 start_game이 처리하고,
+ * FE는 서버가 돌려준 items_used만 실제 효과에 반영한다.
+ */
+export interface ShopItem {
+  id: ItemId
+  name: string
+  icon: string
+  description: string
+  price: number
+  /** 이 아이템을 쓸 수 있는 모드 */
+  modes: GameMode[]
+}
+
+export const SHOP_ITEMS: ShopItem[] = [
+  {
+    id: 'grip_boost',
+    name: '집게 강화',
+    icon: '💪',
+    description: '집게가 버티는 힘이 60% 올라갑니다. 다리 끝을 물어도 잘 놓치지 않습니다.',
+    price: 1500,
+    modes: ['small'],
+  },
+  {
+    id: 'extra_time',
+    name: '시간 연장',
+    icon: '⏱',
+    description: '제한 시간이 20초 늘어납니다.',
+    price: 1200,
+    modes: ['small', 'medium'],
+  },
+]
+
+export const ITEM_BY_ID: Record<ItemId, ShopItem> = Object.fromEntries(
+  SHOP_ITEMS.map((item) => [item.id, item]),
+) as Record<ItemId, ShopItem>
+
+/** 아이템 효과값 — 게임 쪽에서 이 값만 보고 계산한다 */
+export const ITEM_EFFECT = {
+  /** 집게 강화: 버티는 토크 배율 */
+  gripBoost: 1.6,
+  /** 시간 연장: 더해지는 초 */
+  extraTimeSec: 20,
+}
 
 export const SIZE_LABEL: Record<DollSize, string> = {
   small: '소형',

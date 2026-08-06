@@ -7,22 +7,25 @@ import { MOCK_DOLLS } from '@/mocks/dolls'
 import { playSfx, startBgm, stopBgm } from '@/lib/sfx'
 
 interface Props {
-  /** 60초 종료 시 획득 개수를 넘긴다 */
+  /** 제한 시간 종료 시 획득 개수를 넘긴다 */
   onEnd: (caught: number) => void
+  /** '시간 연장' 아이템으로 늘어난 초 */
+  bonusSec?: number
 }
 
 const NAMES = MOCK_DOLLS.filter((d) => d.size === 'medium').map((d) => d.name)
 const FLASH_MS = 900
 
 /** 중형 — 빨래집게 인형뽑기 스테이지 (F2-8) */
-export function ClipStage({ onEnd }: Props) {
+export function ClipStage({ onEnd, bonusSec = 0 }: Props) {
+  const limitSec = TIME_ATTACK_SEC + bonusSec
   const handleRef = useRef<ClipSceneHandle | null>(null)
   const onEndRef = useRef(onEnd)
   onEndRef.current = onEnd
 
   const [caught, setCaught] = useState(0)
   const [phase, setPhase] = useState<ClipPhase>('ready')
-  const [remain, setRemain] = useState(TIME_ATTACK_SEC)
+  const [remain, setRemain] = useState(limitSec)
   const [ended, setEnded] = useState(false)
   const [flash, setFlash] = useState<'hit' | 'miss' | null>(null)
 
@@ -64,7 +67,7 @@ export function ClipStage({ onEnd }: Props) {
   useEffect(() => {
     const startedAt = Date.now()
     const id = setInterval(() => {
-      const left = TIME_ATTACK_SEC - Math.floor((Date.now() - startedAt) / 1000)
+      const left = limitSec - Math.floor((Date.now() - startedAt) / 1000)
       if (left <= 0) {
         clearInterval(id)
         setRemain(0)
@@ -75,7 +78,7 @@ export function ClipStage({ onEnd }: Props) {
       setRemain(left)
     }, 200)
     return () => clearInterval(id)
-  }, [])
+  }, [limitSec])
 
   const busy = phase !== 'ready' || ended
 
@@ -86,6 +89,7 @@ export function ClipStage({ onEnd }: Props) {
           ⏱ {String(remain).padStart(2, '0')}초
         </div>
         <div className="stage__score">
+          {bonusSec > 0 ? <em className="stage__buff">⏱ 시간 연장</em> : null}
           획득 <strong>{caught}</strong>개 · {caught * SCORE_PER_DOLL}점
         </div>
       </div>

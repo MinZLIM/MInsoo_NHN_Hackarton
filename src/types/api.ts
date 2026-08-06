@@ -42,11 +42,28 @@ export interface AcquiredDoll {
   is_new: boolean
 }
 
+/** 상점에서 파는 게임 아이템 (REQ-SHOP-02) */
+export type ItemId = 'grip_boost' | 'extra_time'
+
+/** get_inventory() — 보유 수량 0인 아이템도 내려온다 (상점에서 잔량 표시용) */
+export interface ItemStock {
+  id: ItemId
+  count: number
+}
+
+export interface BuyItemResult {
+  id: ItemId
+  count: number
+  gold_after: number
+}
+
 export interface StartGameResult {
   session_id: string
   mode: GameMode
   cost: number
   gold_after: number
+  /** 이번 판에 실제로 소모된 아이템. 서버가 확정해 준 값만 믿는다. */
+  items_used: ItemId[]
 }
 
 export interface RankChange {
@@ -94,6 +111,8 @@ export type ApiErrorCode =
   | 'INVALID_TARGET'
   | 'INVALID_AMOUNT'
   | 'NOT_ENOUGH_DOLLS'
+  | 'NOT_ENOUGH_ITEMS'
+  | 'ITEM_NOT_ALLOWED'
   | 'SIGNUP_FAILED'
   | 'UNKNOWN'
 
@@ -113,6 +132,8 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   INVALID_TARGET: '대상 유저를 찾을 수 없습니다.',
   INVALID_AMOUNT: '금액을 올바르게 입력해 주세요.',
   NOT_ENOUGH_DOLLS: '보유 수량이 부족합니다.',
+  NOT_ENOUGH_ITEMS: '아이템이 부족합니다.',
+  ITEM_NOT_ALLOWED: '이 모드에서는 사용할 수 없는 아이템입니다.',
   SIGNUP_FAILED: '가입에 실패했습니다. 닉네임이 이미 사용 중일 수 있으니 다른 닉네임으로 시도해 주세요.',
   UNKNOWN: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 }

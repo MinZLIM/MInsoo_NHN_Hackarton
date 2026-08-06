@@ -3,9 +3,12 @@ import { mockApi } from '@/mocks/api'
 import {
   ApiError,
   type ApiErrorCode,
+  type BuyItemResult,
   type CollectionEntry,
   type FinishGameResult,
   type GameMode,
+  type ItemId,
+  type ItemStock,
   type Leaderboard,
   type Profile,
   type RankMode,
@@ -24,12 +27,20 @@ export interface GameApi {
   signOut(): Promise<void>
   getProfile(): Promise<Profile | null>
 
-  startGame(mode: GameMode): Promise<StartGameResult>
+  /**
+   * 게임 시작. useItems에 넣은 아이템은 서버가 검사하고 소모한다.
+   * 실제로 쓰인 아이템은 응답의 items_used로만 판단한다.
+   */
+  startGame(mode: GameMode, useItems?: ItemId[]): Promise<StartGameResult>
   finishGame(sessionId: string, caught: number): Promise<FinishGameResult>
   getCollection(): Promise<CollectionEntry[]>
   sellDoll(dollId: number, count: number): Promise<SellDollResult>
   transferGold(toNickname: string, amount: number): Promise<TransferResult>
   getLeaderboard(mode: RankMode): Promise<Leaderboard>
+
+  /** 보유 아이템. 수량 0인 것도 포함해서 내려온다. (REQ-SHOP-02) */
+  getInventory(): Promise<ItemStock[]>
+  buyItem(itemId: ItemId, count: number): Promise<BuyItemResult>
 
   /** 본인 gold 변경을 구독한다. 해제 함수를 반환. (REQ-LOBBY-01) */
   subscribeGold(userId: string, onChange: (gold: number) => void): () => void
@@ -41,6 +52,8 @@ const KNOWN_CODES: ApiErrorCode[] = [
   'INVALID_TARGET',
   'INVALID_AMOUNT',
   'NOT_ENOUGH_DOLLS',
+  'NOT_ENOUGH_ITEMS',
+  'ITEM_NOT_ALLOWED',
 ]
 
 /** Postgres 예외 메시지에서 계약된 에러 코드를 뽑아낸다. */
@@ -101,7 +114,17 @@ const supabaseApi: GameApi = {
     return data as Profile
   },
 
-  startGame: (mode) => rpc<StartGameResult>('start_game', { p_mode: mode }),
+  /*
+   * 아이템을 고르지 않았을 때는 p_items를 아예 보내지 않는다.
+   * 서버에 아직 아이템 인자가 없어도 기존과 똑같이 동작해야 하기 때문이다.
+   */
+  startGame: (mode, useItems) =>
+    rpc<StartGameResult>(
+      'start_game',
+      useItems && useItems.length > 0
+        ? { p_mode: mode, p_items: useItems }
+        : { p_mode: mode },
+    ).then((result) => ({ ...result, items_used: result.items_used ?? [] })),
 
   finishGame: (sessionId, caught) =>
     rpc<FinishGameResult>('finish_game', { p_session_id: sessionId, p_caught: caught }),
@@ -115,6 +138,11 @@ const supabaseApi: GameApi = {
     rpc<TransferResult>('transfer_gold', { p_to_nickname: toNickname, p_amount: amount }),
 
   getLeaderboard: (mode) => rpc<Leaderboard>('get_leaderboard', { p_mode: mode }),
+
+  getInventory: () => rpc<ItemStock[]>('get_inventory'),
+
+  buyItem: (itemId, count) =>
+    rpc<BuyItemResult>('buy_item', { p_item_id: itemId, p_count: count }),
 
   subscribeGold(userId, onChange) {
     const channel = requireSupabase()

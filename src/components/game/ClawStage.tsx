@@ -8,22 +8,27 @@ import { SCORE_PER_DOLL, TIME_ATTACK_SEC } from '@/lib/constants'
 import { MOCK_DOLLS } from '@/mocks/dolls'
 
 interface Props {
-  /** 60초 종료 시 획득 개수를 넘긴다 */
+  /** 제한 시간 종료 시 획득 개수를 넘긴다 */
   onEnd: (caught: number) => void
+  /** '시간 연장' 아이템으로 늘어난 초 */
+  bonusSec?: number
+  /** '집게 강화' 아이템의 파지력 배율 */
+  gripBoost?: number
 }
 
 // 모듈 상수로 고정한다. 매 렌더 새 배열을 넘기면 씬이 통째로 다시 만들어진다.
 const SMALL_NAMES = MOCK_DOLLS.filter((d) => d.size === 'small').map((d) => d.name)
 
 /** 소형 인형뽑기 3D 스테이지 — 집게를 직접 조준한다 (F2-2, F2-3) */
-export function ClawStage({ onEnd }: Props) {
+export function ClawStage({ onEnd, bonusSec = 0, gripBoost = 1 }: Props) {
+  const limitSec = TIME_ATTACK_SEC + bonusSec
   const handleRef = useRef<ClawSceneHandle | null>(null)
   const onEndRef = useRef(onEnd)
   onEndRef.current = onEnd
 
   const [caught, setCaught] = useState(0)
   const [phase, setPhase] = useState<ClawPhase>('aim')
-  const [remain, setRemain] = useState(TIME_ATTACK_SEC)
+  const [remain, setRemain] = useState(limitSec)
   const [ended, setEnded] = useState(false)
   const [view, setView] = useState<ViewKey>('front')
 
@@ -83,7 +88,7 @@ export function ClawStage({ onEnd }: Props) {
   useEffect(() => {
     const startedAt = Date.now()
     const id = setInterval(() => {
-      const left = TIME_ATTACK_SEC - Math.floor((Date.now() - startedAt) / 1000)
+      const left = limitSec - Math.floor((Date.now() - startedAt) / 1000)
       if (left <= 0) {
         clearInterval(id)
         setRemain(0)
@@ -94,7 +99,7 @@ export function ClawStage({ onEnd }: Props) {
       setRemain(left)
     }, 200)
     return () => clearInterval(id)
-  }, [])
+  }, [limitSec])
 
   const busy = phase !== 'aim' || ended
 
@@ -105,6 +110,8 @@ export function ClawStage({ onEnd }: Props) {
           ⏱ {String(remain).padStart(2, '0')}초
         </div>
         <div className="stage__score">
+          {bonusSec > 0 ? <em className="stage__buff">⏱ 시간 연장</em> : null}
+          {gripBoost > 1 ? <em className="stage__buff">💪 집게 강화</em> : null}
           획득 <strong>{caught}</strong>개 · {caught * SCORE_PER_DOLL}점
         </div>
       </div>
@@ -136,6 +143,7 @@ export function ClawStage({ onEnd }: Props) {
           <ClawScene
             names={SMALL_NAMES}
             control="manual"
+            gripBoost={gripBoost}
             onCatch={setCaught}
             onPhaseChange={setPhase}
             onReady={onReady}
