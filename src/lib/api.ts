@@ -63,6 +63,52 @@ function toApiError(error: { message?: string } | null): ApiError {
   return new ApiError(code, message)
 }
 
+interface SupabaseAuthError {
+  code?: string
+  status?: number
+  message?: string
+}
+
+/**
+ * Supabase Auth 에러를 화면에 쓸 코드로 옮긴다.
+ *
+ * error.code는 supabase-js가 비교적 최근에 채우기 시작한 값이라 비어 있는 경로가 남아 있다.
+ * 그래서 코드로 먼저 보고, 없으면 메시지 문자열로 한 번 더 본다.
+ * 둘 다 못 맞히면 UNKNOWN으로 두되 원문 message는 ApiError에 담아 콘솔에서 추적할 수 있게 한다.
+ */
+function toAuthError(error: SupabaseAuthError): ApiError {
+  const code = error.code ?? ''
+  const message = error.message ?? ''
+  const lower = message.toLowerCase()
+  const of = (c: ApiErrorCode) => new ApiError(c, message)
+
+  // 없는 계정인지 틀린 비밀번호인지는 서버가 알려주지 않는다. 계정 존재 여부가 새는 걸 막기 위해서다.
+  if (code === 'invalid_credentials' || lower.includes('invalid login credentials')) {
+    return of('INVALID_CREDENTIALS')
+  }
+  if (code === 'email_not_confirmed' || lower.includes('email not confirmed')) {
+    return of('EMAIL_NOT_CONFIRMED')
+  }
+  if (
+    code === 'user_already_exists' ||
+    code === 'email_exists' ||
+    lower.includes('already registered') ||
+    lower.includes('user already exists')
+  ) {
+    return of('EMAIL_ALREADY_REGISTERED')
+  }
+  if (code === 'weak_password' || lower.includes('password should')) {
+    return of('WEAK_PASSWORD')
+  }
+  if (code === 'validation_failed' || lower.includes('unable to validate email')) {
+    return of('INVALID_EMAIL')
+  }
+  if (error.status === 429 || code.includes('rate_limit') || lower.includes('rate limit')) {
+    return of('TOO_MANY_REQUESTS')
+  }
+  return of('UNKNOWN')
+}
+
 async function rpc<T>(fn: string, params: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await requireSupabase().rpc(fn, params)
   if (error) throw toApiError(error)
@@ -71,33 +117,43 @@ async function rpc<T>(fn: string, params: Record<string, unknown> = {}): Promise
 
 const supabaseApi: GameApi = {
   async signUp(email, password, nickname) {
-    const { error } = await requireSupabase().auth.signUp({
+    const { data, error } = await requireSupabase().auth.signUp({
       email,
       password,
       options: { data: { nickname } },
     })
-    if (!error) return
+
+    if (error) {
+      /*
+       * 닉네임이 겹치면 profiles의 unique 제약에 걸려 가입 트리거가 실패하고,
+       * Supabase는 "Database error saving new user"라는 500만 돌려준다.
+       * 원인을 구분할 단서가 이것뿐이라 닉네임 중복으로 단정해 안내한다.
+       * 서버에서 중복 닉네임을 별도 코드로 돌려주면 이 분기는 지울 수 있다.
+       */
+      if (error.message?.includes('Database error saving new user')) {
+        throw new ApiError('NICKNAME_TAKEN', error.message)
+      }
+      throw toAuthError(error)
+    }
 
     /*
-     * 닉네임이 겹치면 profiles의 unique 제약에 걸려 가입 트리거가 실패하고,
-     * Supabase는 "Database error saving new user"라는 500만 돌려준다.
-     * 원인을 구분할 단서가 이것뿐이라 문구로만 안내한다.
-     * 서버에서 중복 닉네임을 별도 코드로 돌려주면 이 분기는 지울 수 있다.
+     * 이메일 확인이 켜져 있으면 이미 가입된 이메일로 가입해도 에러가 아니라
+     * '성공'이 돌아온다. 가입 여부가 새는 걸 막으려고 서버가 일부러 뭉개기 때문이다.
+     * 이때 identities만 빈 배열로 오므로, 그 신호로 중복 가입을 판별한다.
      */
-    if (error.message?.includes('Database error saving new user')) {
-      throw new ApiError('SIGNUP_FAILED', error.message)
+    if (data.user && data.user.identities?.length === 0) {
+      throw new ApiError('EMAIL_ALREADY_REGISTERED')
     }
-    throw toApiError(error)
   },
 
   async signIn(email, password) {
     const { error } = await requireSupabase().auth.signInWithPassword({ email, password })
-    if (error) throw toApiError(error)
+    if (error) throw toAuthError(error)
   },
 
   async signOut() {
     const { error } = await requireSupabase().auth.signOut()
-    if (error) throw toApiError(error)
+    if (error) throw new ApiError('SIGNOUT_FAILED', error.message)
   },
 
   async getProfile() {

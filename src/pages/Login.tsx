@@ -5,6 +5,7 @@ import { toast } from '@/store/useToastStore'
 import { Button } from '@/components/ui/Button'
 import { Loading } from '@/components/ui/Loading'
 import { messageOf } from '@/types/api'
+import { PASSWORD_RULE_TEXT, validatePassword } from '@/lib/password'
 import { USE_MOCK } from '@/lib/supabase'
 import { formatGold } from '@/lib/constants'
 import { MASTER_ACCOUNT } from '@/mocks/api'
@@ -28,10 +29,16 @@ export function Login() {
 
   const validate = (): string | null => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return '이메일 형식을 확인해 주세요.'
-    if (password.length < 6) return '비밀번호는 6자 이상이어야 합니다.'
-    if (tab === 'signUp' && nickname.trim().length < 2) {
-      return '닉네임은 2자 이상이어야 합니다.'
+
+    if (tab === 'signIn') {
+      // 로그인은 규칙을 적용하지 않는다. 규칙이 생기기 전에 만든 계정도 들어올 수 있어야 한다.
+      if (!password) return '비밀번호를 입력해 주세요.'
+      return null
     }
+
+    const weak = validatePassword(password)
+    if (weak) return weak
+    if (nickname.trim().length < 2) return '닉네임은 2자 이상이어야 합니다.'
     return null
   }
 
@@ -125,7 +132,7 @@ export function Login() {
               type="password"
               value={password}
               autoComplete={tab === 'signIn' ? 'current-password' : 'new-password'}
-              placeholder="6자 이상"
+              placeholder={tab === 'signIn' ? '비밀번호' : PASSWORD_RULE_TEXT}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
@@ -146,13 +153,13 @@ export function Login() {
           {error ? <p className="field__error">{error}</p> : null}
 
           <Button type="submit" size="lg" loading={loading}>
-            {tab === 'signIn' ? '로그인' : '가입하고 시작하기'}
+            {tab === 'signIn' ? '로그인' : '회원가입'}
           </Button>
         </form>
 
         {USE_MOCK ? (
           <div className="login__mock">
-            <p>⚠️ mock 모드입니다. 아무 이메일/비밀번호나 입력하면 진입됩니다.</p>
+            <p>⚠️ mock 모드입니다. 계정은 이 브라우저에만 저장되며, 먼저 회원가입해야 로그인됩니다.</p>
             <button
               type="button"
               className="login__master"

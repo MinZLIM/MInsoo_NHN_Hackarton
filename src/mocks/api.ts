@@ -18,6 +18,7 @@ import {
   type TransferResult,
 } from '@/types/api'
 import { ENTRY_COST, ITEM_BY_ID, SCORE_PER_DOLL, SHOP_ITEMS, TIER_LABEL } from '@/lib/constants'
+import { validatePassword } from '@/lib/password'
 import { MOCK_DOLLS } from './dolls'
 
 /**
@@ -122,9 +123,6 @@ export const MASTER_ACCOUNT = {
   gold: 1_000_000,
 }
 
-const isMaster = (email: string, password: string) =>
-  email.trim().toLowerCase() === MASTER_ACCOUNT.email && password === MASTER_ACCOUNT.password
-
 /** 인형 45종을 1개씩 보유한 상태 */
 const allDolls = (): Record<number, number> =>
   Object.fromEntries(MOCK_DOLLS.map((d) => [d.id, 1]))
@@ -159,6 +157,34 @@ const masterState = (): MockState => ({
     medium: { tier: 'challenger', best: 180, promoteCnt: 0, demoteCnt: 0 },
   },
 })
+
+/**
+ * 가입된 계정 장부. 진행 상태(MockState)와 수명이 달라서 별도 키로 저장한다.
+ * 계정을 갈아끼워도 장부는 남아야 '이미 가입된 이메일'을 판별할 수 있기 때문이다.
+ *
+ * ⚠️ mock 전용. 비밀번호를 평문으로 들고 있으므로 실제 서버 코드로 옮기면 안 된다.
+ */
+interface MockAccount {
+  password: string
+  nickname: string
+}
+
+const ACCOUNTS_KEY = 'claw-mock-accounts'
+
+function loadAccounts(): Record<string, MockAccount> {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, MockAccount>) : {}
+  } catch {
+    return {}
+  }
+}
+
+let accounts = loadAccounts()
+
+function saveAccounts() {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts))
+}
 
 function load(): MockState {
   try {
@@ -195,12 +221,31 @@ const DROP_POOL: Record<GameMode, DollSize> = {
 }
 
 export const mockApi: GameApi = {
-  // 계정만 만든다. 로그인은 사용자가 직접 하므로 signedIn은 건드리지 않는다.
-  // (같은 이메일로 로그인하면 아래 signIn이 이 상태를 그대로 이어받아 닉네임·골드가 유지된다)
-  async signUp(email, _password, nickname) {
+  /*
+   * 계정만 만든다. 로그인은 사용자가 직접 하므로 signedIn은 건드리지 않는다.
+   * (같은 이메일로 로그인하면 아래 signIn이 이 상태를 그대로 이어받아 닉네임·골드가 유지된다)
+   *
+   * 실패 사유를 실제 서버와 같은 코드로 던진다. mock으로 시연·QA할 때도
+   * 로그인 화면의 안내 문구가 실 연동 때와 똑같이 동작해야 하기 때문이다.
+   */
+  async signUp(email, password, nickname) {
+    const normalized = email.trim().toLowerCase()
+
+    if (normalized === MASTER_ACCOUNT.email || accounts[normalized]) {
+      throw new ApiError('EMAIL_ALREADY_REGISTERED')
+    }
+    if (validatePassword(password)) throw new ApiError('WEAK_PASSWORD')
+
+    const trimmed = nickname.trim()
+    const taken = Object.values(accounts).some((a) => a.nickname === trimmed)
+    if (trimmed === MASTER_ACCOUNT.nickname || taken) throw new ApiError('NICKNAME_TAKEN')
+
+    accounts[normalized] = { password, nickname: trimmed }
+    saveAccounts()
+
     state = initialState()
-    state.email = email.trim().toLowerCase()
-    state.profile.nickname = nickname
+    state.email = normalized
+    state.profile.nickname = trimmed
     save()
     await delay(null)
   },
@@ -208,13 +253,23 @@ export const mockApi: GameApi = {
   async signIn(email, password) {
     const normalized = email.trim().toLowerCase()
 
-    if (isMaster(normalized, password)) {
+    if (normalized === MASTER_ACCOUNT.email) {
+      if (password !== MASTER_ACCOUNT.password) throw new ApiError('WRONG_PASSWORD')
       // 마스터 계정은 접속할 때마다 완비된 상태로 되돌린다. 시연 중 소모돼도 다시 로그인하면 복구된다.
       state = masterState()
-    } else if (state.email !== normalized) {
-      // 다른 계정으로 바꿔 로그인하면 이전 계정의 진행 상황을 물려받지 않는다.
-      state = initialState()
-      state.email = normalized
+    } else {
+      // 실제 Supabase는 이 둘을 구분해 주지 않지만(계정 존재 여부가 새기 때문),
+      // mock은 개발·시연용이라 어디가 틀렸는지 바로 보이는 쪽이 낫다.
+      const account = accounts[normalized]
+      if (!account) throw new ApiError('ACCOUNT_NOT_FOUND')
+      if (account.password !== password) throw new ApiError('WRONG_PASSWORD')
+
+      if (state.email !== normalized) {
+        // 다른 계정으로 바꿔 로그인하면 이전 계정의 진행 상황을 물려받지 않는다.
+        state = initialState()
+        state.email = normalized
+        state.profile.nickname = account.nickname
+      }
     }
 
     state.signedIn = true

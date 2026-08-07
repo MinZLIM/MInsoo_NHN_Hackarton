@@ -1,18 +1,16 @@
 /** 상점 아이템 구매 → 입장 창 선택 → 게임 시작 확인. node scripts/smoke-items.mjs <폴더> <태그> */
 import puppeteer from 'puppeteer-core'
+import { loginFresh } from './_auth.mjs'
 const B='http://localhost:5173', OUT=process.argv[2], TAG=process.argv[3]||'item'
 const browser=await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:false,args:['--no-sandbox','--window-size=1300,1050']})
 const page=await browser.newPage(); await page.setViewport({width:1200,height:1000,deviceScaleFactor:2})
 const errs=[]; page.on('console',m=>{if(m.type()==='error')errs.push(m.text().slice(0,180))}); page.on('pageerror',e=>errs.push('PAGEERROR: '+e.message))
 const wait=ms=>new Promise(r=>setTimeout(r,ms))
 const click=(s,t)=>page.evaluate((s,t)=>{const l=[...document.querySelectorAll(s)];const e=t?l.find(x=>x.textContent.includes(t)):l[0];if(!e)throw new Error('no '+s+' '+(t||''));e.click()},s,t)
-const setI=(s,v)=>page.evaluate((s,val)=>{const el=document.querySelector(s);const set=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;set.call(el,val);el.dispatchEvent(new Event('input',{bubbles:true}))},s,v)
 const txt=s=>page.evaluate(s=>document.querySelector(s)?.innerText,s)
 
 await page.goto(`${B}/#/login`,{waitUntil:'networkidle0'}); await page.waitForSelector('input[type=email]'); await wait(600)
-await setI('input[type=email]','item@test.com'); await setI('input[type=password]','pass1234')
-await click('button[type=submit]')
-await page.waitForFunction(()=>location.hash.includes('lobby'),{timeout:15000}); await wait(700)
+await loginFresh(page,'item'); await wait(700)
 
 // 인형을 팔아 골드를 만든 뒤 아이템 구매
 await page.goto(`${B}/#/shop`,{waitUntil:'networkidle0'}); await wait(1200)

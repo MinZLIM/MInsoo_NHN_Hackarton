@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAudioStore } from '@/store/useAudioStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { playSfx } from '@/lib/sfx'
+import { toast } from '@/store/useToastStore'
+import { messageOf } from '@/types/api'
 
 /**
  * 우측 상단 환경설정.
@@ -98,8 +100,15 @@ export function SettingsMenu() {
             className="settings__signout"
             onClick={async () => {
               setOpen(false)
-              await signOut()
-              navigate('/login', { replace: true })
+              try {
+                await signOut()
+                toast.success('로그아웃되었습니다.')
+                navigate('/login', { replace: true })
+              } catch (err) {
+                // 세션이 안 끊겼는데 로그인 화면으로 보내면 라우트 가드가 도로 튕겨낸다.
+                // 실패했을 때는 그 자리에 머무르게 두고 사유만 알린다.
+                toast.error(messageOf(err))
+              }
             }}
           >
             로그아웃
