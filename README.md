@@ -5,7 +5,7 @@ Vite와 GitHub Pages를 이용해 배포하고, Supabase를 백엔드로 활용�
 > 📋 작업 순서 및 FE/BE 분담은 **[TASKS.md](./TASKS.md)** 를 참고하세요.
 > 📐 DB 스키마·RPC 계약은 **[docs/SCHEMA.md](./docs/SCHEMA.md)** 를 참고하세요.
 
-### 🎮 시연용 게임 마스터 계정
+### 🎮 시연용 게임 마스터 계정 
 
 | 이메일 | 비밀번호 | 상태 |
 | :--- | :--- | :--- |
