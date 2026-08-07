@@ -48,11 +48,16 @@ export function Login() {
       if (tab === 'signIn') {
         await signIn(email, password)
         toast.success('로그인되었습니다.')
+        navigate('/lobby', { replace: true })
       } else {
         await signUp(email, password, nickname.trim())
-        toast.success(`가입 완료! ${formatGold(10000)} Gold를 받았습니다.`)
+        // 가입까지만 하고 로비로 보내지 않는다. 로그인은 사용자가 직접 한다.
+        // 이메일은 그대로 두어 바로 이어서 로그인할 수 있게 하고, 비밀번호는 지운다.
+        setTab('signIn')
+        setPassword('')
+        setNickname('')
+        toast.success(`가입 완료! ${formatGold(10000)} Gold를 드렸습니다. 로그인해 주세요.`)
       }
-      navigate('/lobby', { replace: true })
     } catch (err) {
       setError(messageOf(err))
     }

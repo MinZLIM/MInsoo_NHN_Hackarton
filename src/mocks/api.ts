@@ -195,10 +195,11 @@ const DROP_POOL: Record<GameMode, DollSize> = {
 }
 
 export const mockApi: GameApi = {
+  // 계정만 만든다. 로그인은 사용자가 직접 하므로 signedIn은 건드리지 않는다.
+  // (같은 이메일로 로그인하면 아래 signIn이 이 상태를 그대로 이어받아 닉네임·골드가 유지된다)
   async signUp(email, _password, nickname) {
     state = initialState()
     state.email = email.trim().toLowerCase()
-    state.signedIn = true
     state.profile.nickname = nickname
     save()
     await delay(null)

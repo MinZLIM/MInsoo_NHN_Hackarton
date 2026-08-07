@@ -40,11 +40,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  /**
+   * 계정만 만들고 로그인은 시키지 않는다. 로그인은 사용자가 직접 하는 동작이다.
+   *
+   * Supabase는 이메일 확인이 꺼져 있으면 auth.signUp() 응답에 세션까지 함께 준다.
+   * 그대로 두면 profile을 안 채워도 새로고침할 때 init()이 그 세션을 복구해서
+   * 결국 자동 로그인이 된다. 그래서 가입 직후 세션을 명시적으로 끊는다.
+   */
   async signUp(email, password, nickname) {
     set({ loading: true })
     try {
       await api.signUp(email, password, nickname)
-      set({ profile: await api.getProfile() })
+      // 이메일 확인이 켜져 있으면 애초에 세션이 없다. 그때의 signOut 실패로
+      // 이미 성공한 가입을 실패로 보이게 만들면 안 된다.
+      await api.signOut().catch(() => {})
+      set({ profile: null })
     } finally {
       set({ loading: false })
     }
